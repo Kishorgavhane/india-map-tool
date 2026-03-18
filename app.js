@@ -374,7 +374,9 @@ function renderMap() {
 
     stPathData.s.forEach(shape => {
       const distName = shape.n;
-      const isSelected = selSet.has(distName);
+      // Match PPT names to district-data names (normalize spaces/case)
+      const norm = s => s.toLowerCase().replace(/[\s\-\.&()]/g,'');
+      const isSelected = selSet.has(distName) || [...selSet].some(d => norm(d) === norm(distName));
 
       // Transform path: scale + translate
       const transformedPath = shape.p.replace(/[\d.]+,[\d.]+/g, coord => {

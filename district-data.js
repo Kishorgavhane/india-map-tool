@@ -6,40 +6,40 @@
 //    3. Delimitation / State Gazette notifications — new districts (2020-2023)
 //
 //  Corrections made vs raw PPT:
-//    - "Bid" → "Beed" (MH)
-//    - "Garhchiroli" → "Gadchiroli" (MH)
-//    - "Osmanabad" → "Dharashiv" (MH, renamed 2023)
-//    - "Haora" → "Howrah" (WB)
-//    - "Hugli" → "Hooghly" (WB)
-//    - "Darjiling" → "Darjeeling" (WB)
-//    - "Baleshwar" → "Balasore" (OD)
-//    - "Kendujhar" → "Keonjhar" (OD)
-//    - "Subarnapur" → "Sonepur" (OD)
-//    - "Bangalore" → "Bangalore Urban" (KA)
-//    - "Gulbarga" → "Kalaburagi" (KA)
-//    - "Bijapur" KA → "Vijayapura" (KA)
-//    - "Belgaum" → "Belagavi" (KA)
-//    - "Bellary" → "Ballari" (KA)
-//    - "Shimoga" → "Shivamogga" (KA)
-//    - "Hoshangabad" → "Narmadapuram" (MP, renamed 2022)
-//    - "Khandwa (East Nimar)" → "Khandwa" (MP)
+//    - "Bid" → "Bid" (MH)
+//    - "Garhchiroli" → "Garhchiroli" (MH)
+//    - "Osmanabad" → "Osmanabad" (MH, renamed 2023)
+//    - "Haora" → "Haora" (WB)
+//    - "Hugli" → "Hugli" (WB)
+//    - "Darjiling" → "Darjiling" (WB)
+//    - "Baleshwar" → "Baleshwar" (OD)
+//    - "Kendujhar" → "Kendujhar" (OD)
+//    - "Subarnapur" → "Subarnapur" (OD)
+//    - "Bangalore" → "Bangalore" (KA)
+//    - "Gulbarga" → "Gulbarga" (KA)
+//    - "Bijapur" KA → "Bijapur" (KA)
+//    - "Belgaum" → "Belgaum" (KA)
+//    - "Bellary" → "Bellary" (KA)
+//    - "Shimoga" → "Shimoga" (KA)
+//    - "Hoshangabad" → "Hoshangabad" (MP, renamed 2022)
+//    - "Khandwa (East Nimar )" → "Khandwa (East Nimar )" (MP)
 //    - "Khargone (West Nimar)" → "Khargone" (MP)
-//    - "Agar-Malwa" → "Agar Malwa" (MP)
+//    - "Agar-Malwa" → "Agar- Malwa" (MP)
 //    - "Sahibzada Ajit Singh Nagar" = SAS Nagar / Mohali (PB)
 //    - "West Jaintia Hills text" → "West Jaintia Hills" (ML, PPT artifact)
 //    - "Eastern West Khansi Hills" → "Eastern West Khasi Hills" (ML)
 //    - "Kaimur (Bhabua)" → "Kaimur" (BR)
-//    - "Sant Ravidas Nagar (Bhadohi)" → "Bhadohi" (UP)
-//    - "Bara Banki" → "Barabanki" (UP)
-//    - "Saraikela-Kharsawan" → "Saraikela Kharsawan" (JH)
-//    - "Pashchimi Singhbhum" → "West Singhbhum" (JH)
-//    - "Purba Singhbhum" → "East Singhbhum" (JH)
-//    - "The Dangs" → "Dang" (GJ)
-//    - "Banas Kantha" → "Banaskantha" (GJ)
-//    - "Dohad" → "Dahod" (GJ)
-//    - "Ahmadabad" → "Ahmedabad" (GJ)
-//    - "Sabar Kantha" → "Sabarkantha" (GJ)
-//    - "Kachchh" → "Kutch" (GJ)
+//    - "Sant Ravidas Nagar (Bhadohi)" → "Sant Ravidas Nagar ( Bhadohi )" (UP)
+//    - "Bara Banki" → "Bara Banki" (UP)
+//    - "Saraikela-Kharsawan" → "Saraikela - Kharsawan" (JH)
+//    - "Pashchimi Singhbhum" → "Pashchimi Singhbhum" (JH)
+//    - "Purba Singhbhum" → "Purba Singhbhum" (JH)
+//    - "The Dangs" → "The Dangs" (GJ)
+//    - "Banas Kantha" → "Banas Kantha" (GJ)
+//    - "Dohad" → "Dohad" (GJ)
+//    - "Ahmadabad" → "Ahmadabad" (GJ)
+//    - "Sabar Kantha" → "Sabar Kantha" (GJ)
+//    - "Kachchh" → "Kachchh" (GJ)
 //    - "Gangtok" removed (city, not district) from SK
 //    - Mirpur & Muzaffarabad removed from J&K (PoK, not Indian admin territory)
 //    - Rajasthan new 19 districts (2023 gazette) added
@@ -102,7 +102,7 @@ window.INDIA_STATES = {
       "Ambala","Bhiwani","Charkhi Dadri","Faridabad","Fatehabad",
       "Gurugram","Hisar","Jhajjar","Jind","Kaithal","Karnal",
       "Kurukshetra","Mahendragarh","Nuh","Palwal","Panchkula",
-      "Panipat","Rewari","Rohtak","Sirsa","Sonipat","Yamunanagar"
+      "Panipat","Rewari","Rohtak","Sirsa","Sonipat","Yamuna Nagar"
     ]
   },
 
@@ -133,23 +133,23 @@ window.INDIA_STATES = {
   "Gujarat": {
     color: "#FFC000", labelColor: "#78350F", abbr: "GJ",
     districts: [
-      "Ahmedabad","Amreli","Anand","Aravalli","Banaskantha","Bharuch",
-      "Bhavnagar","Botad","Chhota Udaipur","Dahod","Dang",
+      "Ahmadabad","Amreli","Anand","Aravalli","Banas Kantha","Bharuch",
+      "Bhavnagar","Botad","Chhota Udaipur","Dohad","The Dangs",
       "Devbhoomi Dwarka","Gandhinagar","Gir Somnath","Jamnagar",
-      "Junagadh","Kheda","Kutch","Mahesana","Mahisagar","Morbi",
+      "Junagadh","Kheda","Kachchh","Mahesana","Mahisagar","Morbi",
       "Narmada","Navsari","Panchmahal","Patan","Porbandar","Rajkot",
-      "Sabarkantha","Surat","Surendranagar","Tapi","Vadodara","Valsad"
+      "Sabar Kantha","Surat","Surendranagar","Tapi","Vadodara","Valsad"
     ]
   },
 
   "Madhya Pradesh": {
     color: "#8EAAD8", labelColor: "#1E3A8A", abbr: "MP",
     districts: [
-      "Agar Malwa","Alirajpur","Anuppur","Ashoknagar","Balaghat",
+      "Agar- Malwa","Alirajpur","Anuppur","Ashoknagar","Balaghat",
       "Barwani","Betul","Bhind","Bhopal","Burhanpur","Chhatarpur",
       "Chhindwara","Damoh","Datia","Dewas","Dhar","Dindori","Guna",
-      "Gwalior","Harda","Indore","Jabalpur","Jhabua","Katni","Khandwa",
-      "Khargone","Mandla","Mandsaur","Morena","Narmadapuram",
+      "Gwalior","Harda","Indore","Jabalpur","Jhabua","Katni","Khandwa (East Nimar )",
+      "Khargone","Mandla","Mandsaur","Morena","Hoshangabad",
       "Narsinghpur","Neemuch","Niwari","Panna","Raisen","Rajgarh",
       "Ratlam","Rewa","Sagar","Satna","Sehore","Seoni","Shahdol",
       "Shajapur","Sheopur","Shivpuri","Sidhi","Singrauli",
@@ -162,7 +162,7 @@ window.INDIA_STATES = {
     districts: [
       "Agra","Aligarh","Ambedkar Nagar","Amethi","Amroha","Auraiya",
       "Ayodhya","Azamgarh","Baghpat","Bahraich","Ballia","Balrampur",
-      "Banda","Barabanki","Bareilly","Basti","Bhadohi","Bijnor","Budaun",
+      "Banda","Bara Banki","Bareilly","Basti","Sant Ravidas Nagar ( Bhadohi )","Bijnor","Budaun",
       "Bulandshahr","Chandauli","Chitrakoot","Deoria","Etah","Etawah",
       "Farrukhabad","Fatehpur","Firozabad","Gautam Buddha Nagar",
       "Ghaziabad","Ghazipur","Gonda","Gorakhpur","Hamirpur","Hapur",
@@ -193,11 +193,11 @@ window.INDIA_STATES = {
   "Jharkhand": {
     color: "#8EAAD8", labelColor: "#1E3A8A", abbr: "JH",
     districts: [
-      "Bokaro","Chatra","Deoghar","Dhanbad","Dumka","East Singhbhum",
+      "Bokaro","Chatra","Deoghar","Dhanbad","Dumka","Purba Singhbhum",
       "Garhwa","Giridih","Godda","Gumla","Hazaribag","Jamtara",
       "Khunti","Kodarma","Latehar","Lohardaga","Pakur","Palamu",
-      "Ramgarh","Ranchi","Sahebganj","Saraikela Kharsawan",
-      "Simdega","West Singhbhum"
+      "Ramgarh","Ranchi","Sahebganj","Saraikela - Kharsawan",
+      "Simdega","Pashchimi Singhbhum"
     ]
   },
 
@@ -205,7 +205,7 @@ window.INDIA_STATES = {
     color: "#ED7D2D", labelColor: "#7C2D12", abbr: "WB",
     districts: [
       "Alipurduar","Bankura","Birbhum","Cooch Behar","Dakshin Dinajpur",
-      "Darjeeling","Hooghly","Howrah","Jalpaiguri","Jhargram",
+      "Darjiling","Hugli","Haora","Jalpaiguri","Jhargram",
       "Kalimpong","Kolkata","Malda","Murshidabad","Nadia",
       "North 24 Parganas","Paschim Bardhaman","Paschim Medinipur",
       "Purba Bardhaman","Purba Medinipur","Purulia",
@@ -229,7 +229,7 @@ window.INDIA_STATES = {
       "Dima Hasao","Goalpara","Golaghat","Hailakandi","Hojai","Jorhat",
       "Kamrup","Kamrup Metropolitan","Karbi Anglong","Karimganj",
       "Kokrajhar","Lakhimpur","Majuli","Morigaon","Nagaon","Nalbari",
-      "Sivasagar","Sonitpur","South Salmara Mankachar","Tamulpur",
+      "Sivasagar","Sonitpur","South Salmara - Mankachar","Tamulpur",
       "Tinsukia","Udalguri","West Karbi Anglong"
     ]
   },
@@ -240,7 +240,7 @@ window.INDIA_STATES = {
       "Anjaw","Changlang","Dibang Valley","East Kameng","East Siang",
       "Kamle","Kra Daadi","Kurung Kumey","Lepa Rada","Lohit","Longding",
       "Lower Dibang Valley","Lower Siang","Lower Subansiri","Namsai",
-      "Pakke Kessang","Papum Pare","Shi Yomi","Siang","Tawang","Tirap",
+      "Pakke-kessang","Papum Pare","Shi- yomi","Siang","Tawang","Tirap",
       "Upper Dibang Valley","Upper Siang","Upper Subansiri",
       "West Kameng","West Siang"
     ]
@@ -293,12 +293,12 @@ window.INDIA_STATES = {
   "Odisha": {
     color: "#8696B0", labelColor: "#1E293B", abbr: "OD",
     districts: [
-      "Angul","Balangir","Balasore","Bargarh","Bhadrak","Boudh",
+      "Angul","Balangir","Baleshwar","Bargarh","Bhadrak","Boudh",
       "Cuttack","Deogarh","Dhenkanal","Gajapati","Ganjam",
-      "Jagatsinghpur","Jajpur","Jharsuguda","Kalahandi","Kandhamal",
-      "Kendrapara","Keonjhar","Khordha","Koraput","Malkangiri",
+      "Jagatsinghapur","Jajpur","Jharsuguda","Kalahandi","Kandhamal",
+      "Kendrapara","Kendujhar","Khordha","Koraput","Malkangiri",
       "Mayurbhanj","Nabarangapur","Nayagarh","Nuapada","Puri",
-      "Rayagada","Sambalpur","Sonepur","Sundargarh"
+      "Rayagada","Sambalpur","Subarnapur","Sundargarh"
     ]
   },
 
@@ -307,7 +307,7 @@ window.INDIA_STATES = {
     districts: [
       "Balod","Baloda Bazar","Balrampur","Bastar","Bemetara","Bijapur",
       "Bilaspur","Dakshin Bastar Dantewada","Dhamtari","Durg",
-      "Gariaband","Gaurella Pendra Marwahi","Janjgir Champa","Jashpur",
+      "Gariaband","Gaurella Pendra Marwahi","Janjgir - Champa","Jashpur",
       "Kabirdham","Khairgarh Chhuikhadan Gandai","Kondagaon","Korba",
       "Koriya","Mahasamund","Manendragarh Chirimiri Bharatpur",
       "Mohla Manpur Ambagarh Chouki","Mungeli","Narayanpur","Raigarh",
@@ -319,11 +319,11 @@ window.INDIA_STATES = {
   "Maharashtra": {
     color: "#E291BE", labelColor: "#831843", abbr: "MH",
     districts: [
-      "Ahmadnagar","Akola","Amravati","Aurangabad","Beed","Bhandara",
-      "Buldhana","Chandrapur","Dharashiv","Dhule","Gadchiroli","Gondia",
-      "Hingoli","Jalgaon","Jalna","Kolhapur","Latur","Mumbai City",
+      "Ahmadnagar","Akola","Amravati","Aurangabad","Bid","Bhandara",
+      "Buldana","Chandrapur","Osmanabad","Dhule","Garhchiroli","Gondiya",
+      "Hingoli","Jalgaon","Jalna","Kolhapur","Latur","Mumbai",
       "Mumbai Suburban","Nagpur","Nanded","Nandurbar","Nashik","Palghar",
-      "Parbhani","Pune","Raigad","Ratnagiri","Sangli","Satara",
+      "Parbhani","Pune","Raigarh","Ratnagiri","Sangli","Satara",
       "Sindhudurg","Solapur","Thane","Wardha","Washim","Yavatmal"
     ]
   },
@@ -362,12 +362,12 @@ window.INDIA_STATES = {
   "Karnataka": {
     color: "#5D748C", labelColor: "#0F172A", abbr: "KA",
     districts: [
-      "Bagalkot","Ballari","Bangalore Rural","Bangalore Urban","Belagavi",
+      "Bagalkot","Bellary","Bangalore Rural","Bangalore","Belgaum",
       "Bidar","Chamarajanagara","Chikkaballapura","Chikkamagaluru",
       "Chitradurga","Dakshina Kannada","Davanagere","Dharwad","Gadag",
-      "Hassan","Haveri","Kalaburagi","Kodagu","Kolar","Koppal","Mandya",
-      "Mysuru","Raichur","Ramanagara","Shivamogga","Tumakuru","Udupi",
-      "Uttara Kannada","Vijayanagara","Vijayapura","Yadgir"
+      "Hassan","Haveri","Gulbarga","Kodagu","Kolar","Koppal","Mandya",
+      "Mysore","Raichur","Ramanagara","Shimoga","Tumkur","Udupi",
+      "Uttara Kannada","Vijayanagara","Bijapur","Yadgir"
     ]
   },
 
