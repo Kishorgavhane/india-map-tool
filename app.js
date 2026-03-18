@@ -10,47 +10,7 @@ let showLegend = true;
 let autoFit   = true;
 let fuse;
 
-// ── GEOGRAPHIC LAYOUT ──
-// Normalized [cx, cy, rx, ry] in a 1000×1100 canvas
-// Each state positioned to approximate real India geography
-const GEO = {
-  "Jammu & Kashmir":      [280,  65, 90, 50],
-  "Ladakh":               [430,  55, 90, 60],
-  "Himachal Pradesh":     [285, 140, 55, 45],
-  "Punjab":               [220, 148, 52, 40],
-  "Chandigarh":           [262, 168, 12, 10],
-  "Uttarakhand":          [358, 140, 58, 42],
-  "Haryana":              [240, 200, 50, 38],
-  "Delhi":                [272, 208, 16, 14],
-  "Uttar Pradesh":        [395, 210, 110, 68],
-  "Rajasthan":            [200, 240, 100, 98],
-  "Gujarat":              [145, 355, 88, 95],
-  "Madhya Pradesh":       [340, 310, 115, 85],
-  "Chhattisgarh":         [455, 370, 68, 80],
-  "Maharashtra":          [285, 450, 120, 90],
-  "Goa":                  [210, 558, 18, 14],
-  "Karnataka":            [270, 590, 100, 95],
-  "Kerala":               [252, 700, 48, 80],
-  "Tamil Nadu":           [335, 690, 90, 105],
-  "Puducherry":           [368, 720, 12, 10],
-  "Andhra Pradesh":       [380, 530, 95, 85],
-  "Telangana":            [362, 450, 82, 68],
-  "Odisha":               [505, 395, 72, 78],
-  "Jharkhand":            [498, 318, 62, 55],
-  "Bihar":                [462, 262, 70, 55],
-  "West Bengal":          [555, 308, 52, 95],
-  "Sikkim":               [576, 228, 22, 18],
-  "Assam":                [625, 228, 72, 45],
-  "Arunachal Pradesh":    [695, 172, 82, 52],
-  "Nagaland":             [718, 238, 34, 32],
-  "Manipur":              [712, 285, 36, 38],
-  "Mizoram":              [688, 332, 34, 38],
-  "Tripura":              [655, 302, 28, 34],
-  "Meghalaya":            [600, 262, 48, 32],
-  "Andaman & Nicobar Islands": [780, 610, 24, 70],
-  "Lakshadweep":          [ 90, 680, 20, 32],
-  "Dadra & Nagar Haveli": [178, 390, 22, 16],
-};
+// Real map paths loaded from india-map-paths.js (extracted from PPT vector shapes)
 
 // ── PRESETS ──
 const PRESETS = {
@@ -340,39 +300,56 @@ function renderMap() {
   empty.style.display = 'none';
   mapOut.style.display = 'block';
   mapOut.classList.remove('map-render-anim');
-  void mapOut.offsetWidth; // force reflow
+  void mapOut.offsetWidth;
   mapOut.classList.add('map-render-anim');
 
   const { w, h } = getOutputSize();
   const bgColor = document.querySelector('#bg-swatch input').value;
   const titleText = document.getElementById('title-input').value.trim();
-  const borderW = 1;
 
-  // Compute bounding box of selected states in GEO space
-  let minX=9999, minY=9999, maxX=0, maxY=0;
+  // ── Compute bounding box from REAL path data ──
+  const PAD = 32;
+  const titleH = titleText ? 52 : 0;
+  const legW = showLegend && states.length <= 16 ? 165 : 0;
+
+  // MAP_W / MAP_H = native size of extracted paths (860x980)
+  const nativeW = window.MAP_W || 860;
+  const nativeH = window.MAP_H || 980;
+
+  // Find tight bbox of selected states only
+  let minX = nativeW, minY = nativeH, maxX = 0, maxY = 0;
   states.forEach(st => {
-    const g = GEO[st];
-    if (!g) return;
-    const [cx,cy,rx,ry] = g;
-    minX = Math.min(minX, cx-rx);
-    minY = Math.min(minY, cy-ry);
-    maxX = Math.max(maxX, cx+rx);
-    maxY = Math.max(maxY, cy+ry);
+    const stData = window.INDIA_MAP_PATHS && window.INDIA_MAP_PATHS[st];
+    if (!stData) return;
+    stData.s.forEach(shape => {
+      const nums = shape.p.match(/[\d.]+,[\d.]+/g) || [];
+      nums.forEach(coord => {
+        const [x, y] = coord.split(',').map(Number);
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      });
+    });
   });
 
-  const pad = 40;
-  const titleH = titleText ? 52 : 0;
-  const legW = showLegend && states.length <= 14 ? 160 : 0;
-  minX -= pad; minY -= pad; maxX += pad + (legW > 0 ? legW/4 : 0); maxY += pad;
+  // Add padding around selection
+  minX = Math.max(0, minX - PAD);
+  minY = Math.max(0, minY - PAD);
+  maxX = Math.min(nativeW, maxX + PAD);
+  maxY = Math.min(nativeH, maxY + PAD);
 
-  const dataW = maxX - minX;
-  const dataH = maxY - minY;
-  const availW = w - pad*2 - legW;
-  const availH = h - pad*2 - titleH;
+  const dataW = maxX - minX || nativeW;
+  const dataH = maxY - minY || nativeH;
+
+  // Scale to fit output canvas
+  const availW = w - PAD*2 - legW;
+  const availH = h - PAD*2 - titleH;
   const scale = Math.min(availW / dataW, availH / dataH);
 
-  const offX = pad + (availW - dataW*scale)/2 - minX*scale;
-  const offY = pad + titleH + (availH - dataH*scale)/2 - minY*scale;
+  // Center offset
+  const offX = PAD + (availW - dataW * scale) / 2 - minX * scale;
+  const offY = PAD + titleH + (availH - dataH * scale) / 2 - minY * scale;
 
   let svg = '';
 
@@ -381,99 +358,77 @@ function renderMap() {
 
   // Title
   if (titleText) {
-    svg += `<text x="${(w-legW)/2}" y="34" font-family="'Plus Jakarta Sans',sans-serif" font-size="22" font-weight="800" fill="#0F172A" text-anchor="middle">${esc(titleText)}</text>`;
-    svg += `<line x1="${(w-legW)/2-100}" y1="44" x2="${(w-legW)/2+100}" y2="44" stroke="#E2E8F0" stroke-width="1"/>`;
+    svg += `<text x="${f((w-legW)/2)}" y="34" font-family="'Plus Jakarta Sans',sans-serif" font-size="22" font-weight="800" fill="#0F172A" text-anchor="middle">${esc(titleText)}</text>`;
+    svg += `<line x1="${f((w-legW)/2-120)}" y1="44" x2="${f((w-legW)/2+120)}" y2="44" stroke="#E2E8F0" stroke-width="1"/>`;
   }
 
-  // ── Draw each state ──
+  // ── Draw real map paths ──
   states.forEach(st => {
-    const g = GEO[st];
-    if (!g) return;
-    const [gcx, gcy, grx, gry] = g;
-    const cx = gcx*scale + offX;
-    const cy = gcy*scale + offY;
-    const rx = grx*scale;
-    const ry = gry*scale;
+    const stPathData = window.INDIA_MAP_PATHS && window.INDIA_MAP_PATHS[st];
+    if (!stPathData) return;
+
     const sel = selected[st];
-    const color = sel.color;
-
+    const stateColor = sel.color;
+    const selSet = sel.districts;
     const allDistricts = INDIA_STATES[st].districts;
-    const selDistricts = Array.from(sel.districts);
-    const total = allDistricts.length;
 
-    if (selDistricts.length === 0) return;
+    stPathData.s.forEach(shape => {
+      const distName = shape.n;
+      const isSelected = selSet.has(distName);
 
-    const stateX = cx - rx;
-    const stateY = cy - ry;
-    const stateW = rx * 2;
-    const stateH = ry * 2;
-    const corner = Math.max(4, Math.min(12, rx * 0.15));
-
-    // If all districts selected → solid state block
-    if (selDistricts.length === total || total <= 2) {
-      svg += `<rect x="${f(stateX)}" y="${f(stateY)}" width="${f(stateW)}" height="${f(stateH)}" rx="${f(corner)}" fill="${color}" stroke="white" stroke-width="${borderW}" opacity="0.9"/>`;
-
-      // State label
-      if (showLabels) {
-        const fs = Math.max(7, Math.min(13, rx*0.35));
-        const tc = getTextColor(color);
-        const abbr = INDIA_STATES[st].abbr;
-        svg += `<text x="${f(cx)}" y="${f(cy+3)}" font-family="'Plus Jakarta Sans',sans-serif" font-size="${f(fs)}" font-weight="700" fill="${tc}" text-anchor="middle">${esc(abbr)}</text>`;
-      }
-    } else {
-      // Partial: draw grid of selected districts
-      // Draw state background (unselected) dimmed
-      svg += `<rect x="${f(stateX)}" y="${f(stateY)}" width="${f(stateW)}" height="${f(stateH)}" rx="${f(corner)}" fill="${lighten(color, 0.75)}" stroke="${lighten(color, 0.5)}" stroke-width="${borderW}" opacity="0.6"/>`;
-
-      // Draw selected districts as mini tiles inside
-      const cols = Math.max(2, Math.ceil(Math.sqrt(selDistricts.length * (stateW/stateH))));
-      const rows = Math.ceil(selDistricts.length / cols);
-      const dw = stateW / cols;
-      const dh = stateH / rows;
-
-      selDistricts.forEach((d, i) => {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const dx = stateX + col*dw;
-        const dy = stateY + row*dh;
-        const dc = Math.max(2, corner*0.5);
-        const tileColor = tintColor(color, i, selDistricts.length);
-
-        svg += `<rect x="${f(dx+0.5)}" y="${f(dy+0.5)}" width="${f(dw-1)}" height="${f(dh-1)}" rx="${f(dc)}" fill="${tileColor}" stroke="white" stroke-width="0.7" opacity="0.95"/>`;
-
-        if (showLabels && dw > 40 && dh > 14) {
-          const fs2 = Math.max(6, Math.min(11, dw/10));
-          const tc2 = getTextColor(tileColor);
-          const short = d.length > 12 ? d.substring(0,11)+'…' : d;
-          svg += `<text x="${f(dx+dw/2)}" y="${f(dy+dh/2+3)}" font-family="'Plus Jakarta Sans',sans-serif" font-size="${f(fs2)}" fill="${tc2}" text-anchor="middle" opacity="0.9">${esc(short)}</text>`;
-        }
+      // Transform path: scale + translate
+      const transformedPath = shape.p.replace(/[\d.]+,[\d.]+/g, coord => {
+        const [px, py] = coord.split(',').map(Number);
+        const nx = f(px * scale + offX);
+        const ny = f(py * scale + offY);
+        return `${nx},${ny}`;
       });
 
-      // Overlay count badge
-      if (showLabels) {
-        const abbr = INDIA_STATES[st].abbr;
-        const fs = Math.max(7, Math.min(11, rx*0.28));
-        svg += `<text x="${f(stateX + 6)}" y="${f(stateY + 14)}" font-family="'Plus Jakarta Sans',sans-serif" font-size="${f(fs)}" font-weight="700" fill="${INDIA_STATES[st].labelColor}" opacity="0.8">${esc(abbr)}</text>`;
+      let fillColor;
+      if (isSelected) {
+        fillColor = stateColor;
+      } else {
+        // Dimmed — unselected district of a selected state
+        fillColor = lighten(stateColor, 0.72);
       }
-    }
+
+      const strokeColor = bgColor === '#ffffff' || bgColor === '#FFFFFF' ? 'white' : 'rgba(255,255,255,0.6)';
+      svg += `<path d="${transformedPath}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="0.6" data-state="${esc(st)}" data-district="${esc(distName)}"/>`;
+
+      // District label
+      if (showLabels && isSelected) {
+        // Find centroid of path bbox
+        const nums = transformedPath.match(/[\d.]+,[\d.]+/g) || [];
+        if (nums.length > 2) {
+          let cx = 0, cy = 0;
+          nums.forEach(c => { const [x,y] = c.split(',').map(Number); cx+=x; cy+=y; });
+          cx /= nums.length; cy /= nums.length;
+          const fs = Math.max(5, Math.min(10, scale * 8));
+          const tc = getTextColor(fillColor);
+          const short = distName.length > 11 ? distName.substring(0,10)+'…' : distName;
+          if (fs >= 6) {
+            svg += `<text x="${f(cx)}" y="${f(cy+2)}" font-family="'Plus Jakarta Sans',sans-serif" font-size="${f(fs)}" fill="${tc}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" opacity="0.9">${esc(short)}</text>`;
+          }
+        }
+      }
+    });
   });
 
   // ── LEGEND ──
-  if (showLegend && states.length > 0 && states.length <= 14) {
-    const legItems = states.length;
+  if (showLegend && states.length > 0 && states.length <= 16) {
     const legItemH = 22;
-    const legH = legItems * legItemH + 20;
+    const legH = states.length * legItemH + 20;
     const legX = w - legW + 8;
-    const legY = (h - legH) / 2;
+    const legY = Math.max(titleH + 10, (h - legH) / 2);
 
-    svg += `<rect x="${f(legX-4)}" y="${f(legY-4)}" width="${f(legW-8)}" height="${f(legH+8)}" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1" opacity="0.95"/>`;
+    svg += `<rect x="${f(legX-4)}" y="${f(legY-8)}" width="${f(legW-8)}" height="${f(legH+8)}" rx="8" fill="white" stroke="#E2E8F0" stroke-width="1" opacity="0.95"/>`;
 
     states.forEach((st, i) => {
-      const y = legY + i * legItemH + 12;
+      const ly = legY + i * legItemH + 10;
       const c = selected[st].color;
       const cnt = selected[st].districts.size;
-      svg += `<rect x="${f(legX+4)}" y="${f(y-7)}" width="14" height="14" rx="3" fill="${c}" stroke="#E2E8F0" stroke-width="0.5"/>`;
-      svg += `<text x="${f(legX+24)}" y="${f(y+2)}" font-family="'Plus Jakarta Sans',sans-serif" font-size="10.5" fill="#334155">${esc(st.length > 14 ? st.substring(0,13)+'…' : st)} <tspan fill="#94A3B8">(${cnt})</tspan></text>`;
+      svg += `<rect x="${f(legX+4)}" y="${f(ly-6)}" width="13" height="13" rx="3" fill="${c}" stroke="#E2E8F0" stroke-width="0.5"/>`;
+      svg += `<text x="${f(legX+22)}" y="${f(ly+3)}" font-family="'Plus Jakarta Sans',sans-serif" font-size="10.5" fill="#334155">${esc(st.length>15?st.substring(0,14)+'…':st)} <tspan fill="#94A3B8">(${cnt})</tspan></text>`;
     });
   }
 
