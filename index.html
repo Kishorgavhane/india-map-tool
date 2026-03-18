@@ -362,7 +362,9 @@
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
     position: relative;
+    cursor: grab;
   }
+  .canvas-wrap:active { cursor: grabbing; }
 
   /* Empty state */
   .empty-state {
@@ -384,10 +386,11 @@
     background: white;
     box-shadow: var(--shadow-lg);
     border-radius: 8px;
-    overflow: hidden;
-    transform-origin: center;
-    transition: transform .3s ease;
+    overflow: visible;
+    transform-origin: center center;
+    transition: transform 0.1s ease-out;
     border: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
   #map-svg { display: block; }
@@ -563,6 +566,12 @@
     </div>
 
     <div class="canvas-spacer"></div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+      <button class="toolbar-btn" onclick="zoomReset()" title="Reset Zoom" style="font-size:10px">Reset</button>
+      <button class="toolbar-btn" onclick="zoomIn()" title="Zoom In">+</button>
+    </div>
   </div>
 
   <div class="canvas-wrap" id="canvas-wrap">

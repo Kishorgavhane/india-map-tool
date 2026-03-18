@@ -10,6 +10,13 @@ let showLegend = true;
 let autoFit   = true;
 let fuse;
 
+// ── ZOOM / PAN STATE ──
+let zoomLevel = 1;
+let panX = 0, panY = 0;
+let isPanning = false;
+let panStartX = 0, panStartY = 0;
+let panStartPanX = 0, panStartPanY = 0;
+
 // Real map paths loaded from india-map-paths.js (extracted from PPT vector shapes)
 
 // ── PRESETS ──
@@ -34,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   renderStateList();
+
+  // Init zoom/pan
+  initZoomPan();
 
   // Close search dropdown on outside click
   document.addEventListener('click', e => {
@@ -370,46 +380,41 @@ function renderMap() {
     const sel = selected[st];
     const stateColor = sel.color;
     const selSet = sel.districts;
-    const allDistricts = INDIA_STATES[st].districts;
 
     stPathData.s.forEach(shape => {
       const distName = shape.n;
-      // Match PPT names to district-data names (normalize spaces/case)
-      const norm = s => s.toLowerCase().replace(/[\s\-\.&()]/g,'');
+      const norm = s => s.toLowerCase().replace(/[\s\-\.&()\/]/g,'');
       const isSelected = selSet.has(distName) || [...selSet].some(d => norm(d) === norm(distName));
 
       // Transform path: scale + translate
       const transformedPath = shape.p.replace(/[\d.]+,[\d.]+/g, coord => {
         const [px, py] = coord.split(',').map(Number);
-        const nx = f(px * scale + offX);
-        const ny = f(py * scale + offY);
-        return `${nx},${ny}`;
+        return `${f(px * scale + offX)},${f(py * scale + offY)}`;
       });
 
-      let fillColor;
-      if (isSelected) {
-        fillColor = stateColor;
-      } else {
-        // Dimmed — unselected district of a selected state
-        fillColor = lighten(stateColor, 0.72);
-      }
+      const fillColor = isSelected ? stateColor : lighten(stateColor, 0.72);
+      const strokeColor = 'rgba(255,255,255,0.8)';
+      svg += `<path d="${transformedPath}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="0.5" data-state="${esc(st)}" data-district="${esc(distName)}"/>`;
 
-      const strokeColor = bgColor === '#ffffff' || bgColor === '#FFFFFF' ? 'white' : 'rgba(255,255,255,0.6)';
-      svg += `<path d="${transformedPath}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="0.6" data-state="${esc(st)}" data-district="${esc(distName)}"/>`;
-
-      // District label
-      if (showLabels && isSelected) {
-        // Find centroid of path bbox
+      // District label — use bbox centroid, size based on shape area
+      if (showLabels && isSelected && distName) {
         const nums = transformedPath.match(/[\d.]+,[\d.]+/g) || [];
-        if (nums.length > 2) {
-          let cx = 0, cy = 0;
-          nums.forEach(c => { const [x,y] = c.split(',').map(Number); cx+=x; cy+=y; });
-          cx /= nums.length; cy /= nums.length;
-          const fs = Math.max(5, Math.min(10, scale * 8));
-          const tc = getTextColor(fillColor);
-          const short = distName.length > 11 ? distName.substring(0,10)+'…' : distName;
-          if (fs >= 6) {
-            svg += `<text x="${f(cx)}" y="${f(cy+2)}" font-family="'Plus Jakarta Sans',sans-serif" font-size="${f(fs)}" fill="${tc}" text-anchor="middle" dominant-baseline="middle" pointer-events="none" opacity="0.9">${esc(short)}</text>`;
+        if (nums.length > 3) {
+          // Proper centroid: average of bounding box midpoints
+          let xs = [], ys = [];
+          nums.forEach(c => { const [x,y] = c.split(',').map(Number); xs.push(x); ys.push(y); });
+          const bboxW = Math.max(...xs) - Math.min(...xs);
+          const bboxH = Math.max(...ys) - Math.min(...ys);
+          const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+          const cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+          // Font size: proportional to district shape size, capped
+          const fs = Math.max(6, Math.min(13, Math.min(bboxW, bboxH) * 0.22));
+          if (bboxW > 12 && bboxH > 8) {
+            const tc = getTextColor(fillColor);
+            // Truncate name to fit
+            const maxChars = Math.max(4, Math.floor(bboxW / (fs * 0.55)));
+            const label = distName.length > maxChars ? distName.substring(0, maxChars - 1) + '…' : distName;
+            svg += `<text x="${f(cx)}" y="${f(cy)}" font-family="'Plus Jakarta Sans',Arial,sans-serif" font-size="${f(fs)}" font-weight="600" fill="${tc}" text-anchor="middle" dominant-baseline="middle" pointer-events="none">${esc(label)}</text>`;
           }
         }
       }
@@ -441,16 +446,104 @@ function renderMap() {
   svgEl.setAttribute('viewBox', `0 0 ${w} ${h}`);
   svgEl.innerHTML = svg;
 
-  // Preview scale
+  // Preview scale (autofit resets zoom)
   if (autoFit) {
     const wrap = document.getElementById('canvas-wrap');
     const avW = wrap.clientWidth - 40;
     const avH = wrap.clientHeight - 40;
-    const sc = Math.min(avW/w, avH/h, 1);
-    document.getElementById('map-output').style.transform = `scale(${sc})`;
-  } else {
-    document.getElementById('map-output').style.transform = '';
+    zoomLevel = Math.min(avW/w, avH/h, 1);
+    panX = 0; panY = 0;
   }
+  applyTransform();
+}
+
+// ── ZOOM / PAN ──
+function applyTransform() {
+  const el = document.getElementById('map-output');
+  el.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+  el.style.transformOrigin = 'center center';
+}
+
+function initZoomPan() {
+  const wrap = document.getElementById('canvas-wrap');
+
+  // Mouse wheel zoom
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.85 : 1.18;
+    zoomLevel = Math.max(0.1, Math.min(8, zoomLevel * delta));
+    applyTransform();
+  }, { passive: false });
+
+  // Mouse drag pan
+  wrap.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    isPanning = true;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    panStartPanX = panX;
+    panStartPanY = panY;
+    wrap.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isPanning) return;
+    panX = panStartPanX + (e.clientX - panStartX);
+    panY = panStartPanY + (e.clientY - panStartY);
+    applyTransform();
+  });
+  window.addEventListener('mouseup', () => {
+    isPanning = false;
+    document.getElementById('canvas-wrap').style.cursor = 'grab';
+  });
+
+  // Touch pinch zoom
+  let lastDist = 0;
+  wrap.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      lastDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, { passive: true });
+  wrap.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (lastDist > 0) {
+        zoomLevel = Math.max(0.1, Math.min(8, zoomLevel * (dist / lastDist)));
+        applyTransform();
+      }
+      lastDist = dist;
+    }
+  }, { passive: true });
+
+  // Double click reset
+  wrap.addEventListener('dblclick', () => {
+    const w = document.getElementById('map-svg').getAttribute('width') || 1280;
+    const h = document.getElementById('map-svg').getAttribute('height') || 720;
+    const avW = wrap.clientWidth - 40;
+    const avH = wrap.clientHeight - 40;
+    zoomLevel = Math.min(avW/w, avH/h, 1);
+    panX = 0; panY = 0;
+    applyTransform();
+  });
+
+  wrap.style.cursor = 'grab';
+}
+
+// Zoom buttons
+function zoomIn()  { zoomLevel = Math.min(8, zoomLevel * 1.3); applyTransform(); }
+function zoomOut() { zoomLevel = Math.max(0.1, zoomLevel / 1.3); applyTransform(); }
+function zoomReset() {
+  const wrap = document.getElementById('canvas-wrap');
+  const w = document.getElementById('map-svg').getAttribute('width') || 1280;
+  const h = document.getElementById('map-svg').getAttribute('height') || 720;
+  zoomLevel = Math.min((wrap.clientWidth-40)/w, (wrap.clientHeight-40)/h, 1);
+  panX = 0; panY = 0;
+  applyTransform();
 }
 
 // ── EXPORT: PNG ──
