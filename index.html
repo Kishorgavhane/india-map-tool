@@ -25,15 +25,17 @@ main{position:relative;min-height:0;display:flex;flex-direction:column}
 #prev{display:none;padding:10px;background:#cbd5e1}#svg{width:100%;height:100%;touch-action:none;cursor:grab}
 #svg path{fill:#e8ecf1;stroke:#fff;stroke-width:.5;vector-effect:non-scaling-stroke;cursor:pointer}
 #cust{display:none;flex:1;overflow:auto;margin:0 12px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px}.cr{display:flex;gap:8px;align-items:center;margin:4px 0}.cr input[data-n]{flex:1;padding:4px}#exp{max-height:46vh;overflow:auto}
+.ds[hidden]{display:none}.nm::before{content:"▸ "}.st.open .nm::before{content:"▾ "}.fl{color:#d97706;font-style:normal}#zones{display:flex;flex-wrap:wrap;gap:4px;padding:0 10px 8px}#zones button{padding:3px 8px;font-size:12px}#zones button.on{background:#2563eb;color:#fff;border-color:#2563eb}#exp textarea{padding:4px;font:inherit;resize:vertical}
 #svg path.on{stroke:#222;stroke-width:1.2}#svg path:hover{opacity:.75}
 </style></head><body>
 <header><h1>India District Map Tool</h1><button onclick="S.clear();sync()">Clear all</button></header>
 <aside>
  <input id="q0" placeholder="Search state or district…" oninput="renderList(this.value)">
+ <div id="zones"></div>
  <div id="list"></div>
  <div id="exp">
   <label class="w">Title (blank = auto)<input id="title" placeholder="e.g. Marathwada Region, Maharashtra"></label>
-  <label class="c"><input type="checkbox" id="dOn" checked> Dealer Name line</label><label><input id="dName" placeholder="Dealer name (optional)"></label>
+  <label class="w">Text to print on page (optional, multi-line)<textarea id="note" rows="2" placeholder="e.g. Dealer: ABC Motors, Pune"></textarea></label>
   <label>Format<select id="fmt"><option value="pdf">PDF</option><option value="png">PNG</option><option value="pptx">PowerPoint (editable shapes)</option><option value="pptxi">PowerPoint (picture)</option><option value="docx">Word</option></select></label>
   <label>Page<select id="page"><option value="a4">A4</option><option value="a3">A3</option><option value="letter">Letter</option></select></label>
   <label>Orientation<select id="ori"><option value="l">Landscape</option><option value="p">Portrait</option></select></label>
@@ -57,14 +59,37 @@ main{position:relative;min-height:0;display:flex;flex-direction:column}
 <script>
 const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Display-name fixes (state-qualified). Add more here if a name looks old/wrong.
-const AL={'Maharashtra|Aurangabad':'Sambhaji Nagar','Maharashtra|Osmanabad':'Dharashiv','Maharashtra|Bid':'Beed','Maharashtra|Garhchiroli':'Gadchiroli','Maharashtra|Gondiya':'Gondia','Maharashtra|Buldana':'Buldhana','Maharashtra|Raigarh':'Raigad'};
+const AL={};`Maharashtra:Aurangabad>Sambhaji Nagar,Osmanabad>Dharashiv,Bid>Beed,Ahmadnagar>Ahilyanagar,Raigarh>Raigad,Gondiya>Gondia,Garhchiroli>Gadchiroli,Buldana>Buldhana
+Rajasthan:#4>Anupgarh,#5>Phalodi,#6>Balotra,Chittaurgarh>Chittorgarh,Dhaulpur>Dholpur,Jhunjhunun>Jhunjhunu,Ganganagar>Sri Ganganagar,Kotputli Behror>Kotputli-Behror,Didwana Kuchaman>Didwana-Kuchaman,Khairthal>Khairthal-Tijara,Salumber>Salumbar
+Karnataka:Bangalore>Bengaluru Urban,Belgaum>Belagavi,Bellary>Ballari,Bijapur>Vijayapura,Chikmagalur>Chikkamagaluru,Gulbarga>Kalaburagi,Mysore>Mysuru,Shimoga>Shivamogga,Tumkur>Tumakuru,Bangalore Rural>Bengaluru Rural
+Madhya Pradesh:Hoshangabad>Narmadapuram,Narsimhapur>Narsinghpur,Khargone (West Nimar )>Khargone,Khandwa (East Nimar )>Khandwa,Agar- Malwa>Agar Malwa
+Haryana:Mewat>Nuh,Dadri>Charkhi Dadri
+Sikkim:South District>Namchi
+West Bengal:Haora>Howrah,Hugli>Hooghly,Darjiling>Darjeeling,Koch Bihar>Cooch Behar,Maldah>Malda,Puruliya>Purulia,Pashchim Bardhaman>Paschim Bardhaman,South Twenty Four Parganas>South 24 Parganas,North Twenty Four Parganas>North 24 Parganas
+Odisha:Baleshwar>Balasore,Kendujhar>Keonjhar,Jajapur>Jajpur,Jagatsinghapur>Jagatsinghpur
+Gujarat:Dohad>Dahod,Mahesana>Mehsana,Banas Kantha>Banaskantha,Sabar Kantha>Sabarkantha,Panch Mahals>Panchmahal,Ahmadabad>Ahmedabad,Kachchh>Kutch,The Dangs>Dang,Aravali>Aravalli
+Uttar Pradesh:Bara Banki>Barabanki,Kheri>Lakhimpur Kheri,Sant Ravidas Nagar ( Bhadohi )>Bhadohi,Rae Bareli>Raebareli,Budaun>Badaun
+Punjab:Ferozepur>Firozpur,Sahibzada Ajit Singh Nagar>SAS Nagar (Mohali)
+Bihar:Purnea>Purnia,Kaimur ( Bhabua )>Kaimur
+Tamil Nadu:Kancheepuram>Kanchipuram,The Nilgiris>Nilgiris,Kallakkurichi>Kallakurichi,Tirupathur>Tirupattur
+Telangana:Mahbubnagar>Mahabubnagar,Rangareddy>Ranga Reddy,Kumuram Bheem>Komaram Bheem Asifabad
+Andhra Pradesh:Y.S.R.>YSR Kadapa
+Chhattisgarh:Kabeerdham>Kabirdham,Janjgir - Champa>Janjgir-Champa,Dakshin Bastar Dantewada>Dantewada,Uttar Bastar Kanker>Kanker,Gariaband>Gariyaband
+Jharkhand:Pashchimi Singhbhum>West Singhbhum,Purba Singhbhum>East Singhbhum,Saraikela - Kharsawan>Seraikela-Kharsawan,Kodarma>Koderma,Sahibganj>Sahebganj,Hazaribag>Hazaribagh
+Uttarakhand:Hardwar>Haridwar,Garhwal>Pauri Garhwal
+Jammu & Kashmir:Baramula>Baramulla,Shopiyan>Shopian,Bandipore>Bandipora,Mirpur>Mirpur (PoK),Muzaffarabad>Muzaffarabad (PoK)
+Ladakh:Leh (Ladakh)>Leh
+Meghalaya:West Jaintia Hills text>West Jaintia Hills,Eastern West Khansi Hills>Eastern West Khasi Hills
+Arunachal Pradesh:Shi- yomi>Shi Yomi,Pakke-kessang>Pakke Kessang,Langding>Longding
+Assam:Karimganj>Sribhumi,#35>Assam (unnamed shape - check)`.split('\n').forEach(g=>{const i=g.indexOf(':'),st=g.slice(0,i);g.slice(i+1).split(',').forEach(x=>{const[a,b]=x.split('>');AL[a[0]==='#'?st+a:st+'|'+a]=b})});
+const AB=new Set(['Dudu','Kekri','Shahpura','Neem Ka Thana','Gangapur City','Jaipur Rural','Jodhpur Rural','Sanchore','Anupgarh']);
 const PAL=['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#46f0f0','#f032e6','#bcf60c','#fabebe','#008080','#e6beff','#9a6324','#fffac8','#800000','#aaffc3','#808000','#ffd8b1','#000075','#a9a9a9'];
 const colorOf=k=>k<PAL.length?PAL[k]:`hsl(${(k*137.5)%360},65%,${52+(k%3)*9}%)`;
 const PAGES={a4:[210,297],a3:[297,420],letter:[215.9,279.4]};
 const P=window.INDIA_MAP_PATHS,ST=Object.keys(P).sort(),D=[],BY={},S=new Set();
 ST.forEach(s=>{BY[s]=[];P[s].s.forEach(sh=>{const n=sh.p.match(/-?\d+\.?\d*/g).map(Number);let a=1e9,b=1e9,c=-1e9,d=-1e9;
  for(let i=0;i<n.length;i+=2){a=Math.min(a,n[i]);c=Math.max(c,n[i]);b=Math.min(b,n[i+1]);d=Math.max(d,n[i+1])}
- const o={id:D.length,st:s,raw:sh.n,name:AL[s+'|'+sh.n]||sh.n,p:sh.p,bb:[a,b,c,d]};D.push(o);BY[s].push(o)})});
+ const o={id:D.length,st:s,raw:sh.n,name:AL[s+'#'+BY[s].length]||AL[s+'|'+sh.n]||sh.n.trim()||(s+' (unnamed shape)'),p:sh.p,bb:[a,b,c,d]};D.push(o);BY[s].push(o)})});
 // ---------- map ----------
 const svg=$('svg');svg.innerHTML=D.map(d=>`<path data-id="${d.id}" d="${d.p}"><title>${esc(d.name)}, ${esc(d.st)}</title></path>`).join('');
 const pathEls=[...svg.querySelectorAll('path')];let vb=[0,0,860,975];
@@ -81,11 +106,16 @@ addEventListener('pointerup',()=>drag=null);
 svg.addEventListener('click',e=>{if(moved>5)return;const t=e.target.closest('path');if(t)toggle(+t.dataset.id)});
 function toggle(id){S.has(id)?S.delete(id):S.add(id);sync()}
 // ---------- sidebar ----------
+const ZONES={'Northern':['Delhi','Haryana','Himachal Pradesh','Jammu & Kashmir','Ladakh','Punjab','Rajasthan','Chandigarh'],'Central':['Uttar Pradesh','Uttarakhand','Madhya Pradesh','Chhattisgarh'],'Eastern':['Bihar','Jharkhand','Odisha','West Bengal'],'Western':['Gujarat','Maharashtra','Goa','Dadra & Nagar Haveli and Daman & Diu'],'Southern':['Andhra Pradesh','Karnataka','Kerala','Tamil Nadu','Telangana','Puducherry','Lakshadweep','Andaman & Nicobar Islands'],'North Eastern':['Assam','Arunachal Pradesh','Manipur','Meghalaya','Mizoram','Nagaland','Tripura','Sikkim']},ZONE={};let ZF=null;
+Object.entries(ZONES).forEach(([z,a])=>a.forEach(s=>ZONE[s]=z));
+function zoneClick(z){ZF=z||null;if(z){const ds=D.filter(d=>ZONE[d.st]===z),all=ds.every(d=>S.has(d.id));ds.forEach(d=>all?S.delete(d.id):S.add(d.id))}
+ document.querySelectorAll('#zones button[data-z]').forEach(b=>b.classList.toggle('on',b.dataset.z===(z||'')));renderList($('q0').value)}
+function expAll(v){document.querySelectorAll('#list .ds').forEach(x=>x.hidden=!v);document.querySelectorAll('#list .st').forEach(x=>x.classList.toggle('open',v))}
 function renderList(q=''){q=q.trim().toLowerCase();let h='';
- ST.forEach(s=>{const sm=s.toLowerCase().includes(q);const m=BY[s].filter(d=>!q||sm||d.name.toLowerCase().includes(q)||d.raw.toLowerCase().includes(q));if(!m.length)return;
-  h+=`<div class="st" data-s="${esc(s)}"><input type="checkbox" data-st="${esc(s)}"><span class="nm">${esc(s)} <i></i></span></div><div class="ds" ${q?'':'hidden'}>${m.map(d=>`<label><input type="checkbox" data-d="${d.id}"> ${esc(d.name)}</label>`).join('')}</div>`});
+ ST.forEach(s=>{if(ZF&&ZONE[s]!==ZF)return;const sm=s.toLowerCase().includes(q);const m=BY[s].filter(d=>!q||sm||d.name.toLowerCase().includes(q)||d.raw.toLowerCase().includes(q));if(!m.length)return;
+  h+=`<div class="st${q?' open':''}" data-s="${esc(s)}"><input type="checkbox" data-st="${esc(s)}"><span class="nm">${esc(s)} <i></i></span></div><div class="ds" ${q?'':'hidden'}>${m.map(d=>`<label><input type="checkbox" data-d="${d.id}"> ${esc(d.name)}${d.st==='Rajasthan'&&AB.has(d.name)?' <i class="fl" title="Abolished Dec 2024 (Rajasthan now has 41 districts)">⚠</i>':''}</label>`).join('')}</div>`});
  $('list').innerHTML=h||'<p class="muted">No match</p>';sync()}
-$('list').addEventListener('click',e=>{const n=e.target.closest('.nm');if(n){const b=n.parentElement.nextElementSibling;b.hidden=!b.hidden}});
+$('list').addEventListener('click',e=>{const n=e.target.closest('.nm');if(n){const b=n.parentElement.nextElementSibling;b.hidden=!b.hidden;n.parentElement.classList.toggle('open',!b.hidden)}});
 $('list').addEventListener('change',e=>{const t=e.target;
  if(t.dataset.d!==undefined){t.checked?S.add(+t.dataset.d):S.delete(+t.dataset.d)}
  else if(t.dataset.st){BY[t.dataset.st].forEach(d=>t.checked?S.add(d.id):S.delete(d.id))}sync()});
@@ -99,13 +129,13 @@ function sync(){
  if($('prev').style.display==='block')renderPrev()}
 // ---------- export page ----------
 const opts=()=>({fmt:$('fmt').value,page:$('page').value,land:$('ori').value==='l',margin:+$('mar').value,q:+$('q').value,title:$('title').value.trim(),
- dealerOn:$('dOn').checked,dealer:$('dName').value.trim(),label:$('lab').value,legend:$('leg').checked,msz:+$('msz').value,lfs:+$('lfs').value,mfs:+$('mfs').value,bw:+$('bw').value,lpos:$('lpos').value});
+ note:$('note').value.replace(/\s+$/,''),label:$('lab').value,legend:$('leg').checked,msz:+$('msz').value,lfs:+$('lfs').value,mfs:+$('mfs').value,bw:+$('bw').value,lpos:$('lpos').value});
 const CU={},colr=(id,j)=>CU[id]&&CU[id].c||colorOf(j),nameOf=id=>CU[id]&&CU[id].n||D[id].name,
  hex=c=>{const x=document.createElement('canvas').getContext('2d');x.fillStyle=c;return x.fillStyle};
 function pageSVG(o,prev){
  const ids=[...S];if(!ids.length)return null;const k0=96/25.4;let[wm,hm]=PAGES[o.page];if(o.land)[wm,hm]=[hm,wm];
  const pw=Math.round(wm*k0),ph=Math.round(hm*k0),m=o.margin*k0,sts=new Set(ids.map(i=>D[i].st)),multi=sts.size>1,
-  title=o.title||(multi?'Selected Districts – India':[...sts][0]+' – Districts'),top=m+36+(o.dealerOn?28:0),aw=pw-2*m,ah=ph-m-top,
+  title=o.title||(multi?'Selected Districts – India':[...sts][0]+' – Districts'),nl=o.note?o.note.split('\n').length:0,top=m+36+(nl?nl*20+8:0),aw=pw-2*m,ah=ph-m-top,
   fs=o.lfs,rh=Math.round(fs*1.5),col=ids.map((id,j)=>colr(id,j)),lab=ids.map((id,j)=>`${j+1}. ${nameOf(id)}${multi?' ('+D[id].st+')':''}`),
   cw=Math.max(...lab.map(t=>t.length))*fs*.56+fs+22,[x0,y0,x1,y1]=bboxOf(ids),bw=(x1-x0)||1,bh=(y1-y0)||1;
  const plan=pos=>{if(!o.legend)return{map:{x:m,y:top,w:aw,h:ah},leg:null};
@@ -119,7 +149,7 @@ function pageSVG(o,prev){
   return{x:tx+(b[0]+b[2])/2*kk,y:ty+(b[1]+b[3])/2*kk,t:nm?nameOf(id):String(j+1),fs:Math.max(7,Math.min(o.mfs,nm?sz/3.5:sz/1.8))}});
  const svgS=`<svg xmlns="http://www.w3.org/2000/svg" ${prev?'':`width="${pw}" height="${ph}"`} viewBox="0 0 ${pw} ${ph}" font-family="Arial,Helvetica,sans-serif"><rect width="${pw}" height="${ph}" fill="#fff"/>`
  +`<text x="${pw/2}" y="${m+22}" text-anchor="middle" font-size="24" font-weight="700">${esc(title)}</text>`
- +(o.dealerOn?`<text x="${m}" y="${m+52}" font-size="15">Dealer Name: ${esc(o.dealer)}</text><line x1="${m+98}" x2="${m+98+Math.max(235,o.dealer.length*9)}" y1="${m+55}" y2="${m+55}" stroke="#333"/>`:'')
+ +(nl?o.note.split('\n').map((t,i)=>`<text x="${pw/2}" y="${m+54+i*20}" text-anchor="middle" font-size="15">${esc(t)}</text>`).join(''):'')
  +`<g transform="translate(${tx},${ty}) scale(${kk})" stroke="#222" stroke-width="${o.bw/kk}" stroke-linejoin="round">`+ids.map((id,j)=>`<path d="${D[id].p}" fill="${col[j]}"/>`).join('')+'</g>'
  +labels.map(l=>`<text x="${l.x}" y="${l.y}" dy=".35em" text-anchor="middle" font-size="${l.fs}" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(l.t)}</text>`).join('')
  +(pl.leg?`<text x="${pl.leg.x}" y="${pl.leg.y+16}" font-size="14" font-weight="700">Colour Code – Districts</text>`+items.map(i=>`<rect x="${i.x}" y="${i.y}" width="${fs}" height="${fs}" fill="${i.c}" stroke="#333" stroke-width=".8"/><text x="${i.x+fs+6}" y="${i.y+fs-1}" font-size="${fs}">${esc(i.t)}</text>`).join(''):'')+'</svg>';
@@ -127,7 +157,7 @@ function pageSVG(o,prev){
 async function pptEdit(r,o){const s=r.s,p=new PptxGenJS(),w=r.wm/25.4,h=r.hm/25.4,I=v=>v/96,hx=c=>hex(c).slice(1).toUpperCase();
  p.defineLayout({name:'MAP',width:w,height:h});p.layout='MAP';const sl=p.addSlide(),F='Arial';
  sl.addText(s.title,{x:0,y:I(s.m),w,h:.45,align:'center',fontSize:24,bold:true,fontFace:F});
- if(o.dealerOn)sl.addText('Dealer Name: '+o.dealer,{x:I(s.m),y:I(s.m+36),w:5,h:.3,fontSize:14,fontFace:F});
+ if(o.note)sl.addText(o.note,{x:I(s.m),y:I(s.m+36),w:w-2*I(s.m),h:o.note.split('\n').length*.3,align:'center',valign:'top',fontSize:15,fontFace:F,margin:0});
  s.ids.forEach((id,j)=>{const b=D[id].bb,bx=s.tx+b[0]*s.kk,by=s.ty+b[1]*s.kk,pts=[];
   D[id].p.split(/(?=[MLZ])/).forEach(c=>{if(c[0]==='Z')pts.push({close:true});else if(c.length>1){const[x,y]=c.slice(1).split(',').map(Number),q={x:I(s.tx+x*s.kk-bx),y:I(s.ty+y*s.kk-by)};if(c[0]==='M')q.moveTo=true;pts.push(q)}});
   sl.addShape('custGeom',{x:I(bx),y:I(by),w:Math.max(.01,I((b[2]-b[0])*s.kk)),h:Math.max(.01,I((b[3]-b[1])*s.kk)),fill:{color:hx(s.col[j])},line:{color:'222222',width:o.bw*.75},points:pts})});
@@ -162,5 +192,6 @@ async function doExport(){
    dl(await d.Packer.toBlob(doc),name+'.docx')}
  }catch(err){alert('Export failed: '+err.message)}
  btn.disabled=false;btn.textContent='Export'}
+$('zones').innerHTML=['',...Object.keys(ZONES)].map(z=>`<button data-z="${z}" class="${z?'':'on'}" title="${z?'Show this zone and select/deselect all its districts':'Show all states'}" onclick="zoneClick('${z}')">${z||'All'}</button>`).join('')+'<button onclick="expAll(true)">＋ Expand all</button><button onclick="expAll(false)">－ Collapse all</button>';
 renderList();
 </script></body></html>
