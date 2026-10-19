@@ -24,6 +24,7 @@ main{position:relative;min-height:0;display:flex;flex-direction:column}
 #mapw,#prev{flex:1;min-height:0;margin:0 12px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
 #prev{display:none;padding:10px;background:#cbd5e1}#svg{width:100%;height:100%;touch-action:none;cursor:grab}
 #svg path{fill:#e8ecf1;stroke:#fff;stroke-width:.5;vector-effect:non-scaling-stroke;cursor:pointer}
+#cust{display:none;flex:1;overflow:auto;margin:0 12px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:10px}.cr{display:flex;gap:8px;align-items:center;margin:4px 0}.cr input[data-n]{flex:1;padding:4px}#exp{max-height:46vh;overflow:auto}
 #svg path.on{stroke:#222;stroke-width:1.2}#svg path:hover{opacity:.75}
 </style></head><body>
 <header><h1>India District Map Tool</h1><button onclick="S.clear();sync()">Clear all</button></header>
@@ -33,20 +34,25 @@ main{position:relative;min-height:0;display:flex;flex-direction:column}
  <div id="exp">
   <label class="w">Title (blank = auto)<input id="title" placeholder="e.g. Marathwada Region, Maharashtra"></label>
   <label class="c"><input type="checkbox" id="dOn" checked> Dealer Name line</label><label><input id="dName" placeholder="Dealer name (optional)"></label>
-  <label>Format<select id="fmt"><option value="pdf">PDF</option><option value="png">PNG</option><option value="pptx">PowerPoint</option><option value="docx">Word</option></select></label>
+  <label>Format<select id="fmt"><option value="pdf">PDF</option><option value="png">PNG</option><option value="pptx">PowerPoint (editable shapes)</option><option value="pptxi">PowerPoint (picture)</option><option value="docx">Word</option></select></label>
   <label>Page<select id="page"><option value="a4">A4</option><option value="a3">A3</option><option value="letter">Letter</option></select></label>
   <label>Orientation<select id="ori"><option value="l">Landscape</option><option value="p">Portrait</option></select></label>
   <label>Printable margin<select id="mar"><option value="6">Narrow (6 mm)</option><option value="12" selected>Normal (12 mm)</option><option value="20">Wide (20 mm)</option></select></label>
   <label>Quality<select id="q"><option value="1.5">Standard</option><option value="2.5" selected>High</option><option value="4">Max</option></select></label>
   <label>Labels on map<select id="lab"><option value="num">Numbers</option><option value="name">District names</option><option value="none">None</option></select></label>
   <label class="c"><input type="checkbox" id="leg" checked> Legend (colour code)</label>
+  <label>Map size %<input type="range" id="msz" min="40" max="100" value="100"></label>
+  <label>Legend text (px)<input type="range" id="lfs" min="8" max="22" value="12"></label>
+  <label>Map label size<input type="range" id="mfs" min="6" max="24" value="13"></label>
+  <label>Boundary width<input type="range" id="bw" min="0.4" max="3" step="0.2" value="1.2"></label>
+  <label class="w">Legend position<select id="lpos"><option value="auto">Auto (gives bigger map)</option><option value="right">Right side</option><option value="bottom">Bottom</option></select></label>
   <button class="p w" id="go" onclick="doExport()">Export</button>
  </div>
 </aside>
 <main>
- <div class="bar"><button class="tab on" id="t1" onclick="show(1)">Map</button><button class="tab" id="t2" onclick="show(2)">Export preview</button>
+ <div class="bar"><button class="tab on" id="t1" onclick="show(1)">Map</button><button class="tab" id="t2" onclick="show(2)">Export preview</button><button class="tab" id="t3" onclick="show(3)">Customize</button>
   <span id="cnt"></span><button onclick="zoomSel()">Zoom to selection</button><button onclick="resetVB()">Reset</button></div>
- <div id="mapw"><svg id="svg" viewBox="0 0 860 975"></svg></div><div id="prev"></div>
+ <div id="mapw"><svg id="svg" viewBox="0 0 860 975"></svg></div><div id="prev"></div><div id="cust"></div>
 </main>
 <script>
 const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -84,7 +90,7 @@ $('list').addEventListener('change',e=>{const t=e.target;
  if(t.dataset.d!==undefined){t.checked?S.add(+t.dataset.d):S.delete(+t.dataset.d)}
  else if(t.dataset.st){BY[t.dataset.st].forEach(d=>t.checked?S.add(d.id):S.delete(d.id))}sync()});
 function sync(){
- const ids=[...S],col={};ids.forEach((id,k)=>col[id]=colorOf(k));
+ const ids=[...S],col={};ids.forEach((id,k)=>col[id]=colr(id,k));
  pathEls.forEach((el,id)=>{const on=S.has(id);el.classList.toggle('on',on);on?el.style.fill=col[id]:el.style.removeProperty('fill')});
  document.querySelectorAll('input[data-d]').forEach(i=>i.checked=S.has(+i.dataset.d));
  document.querySelectorAll('.st').forEach(r=>{const s=r.dataset.s,n=BY[s].filter(d=>S.has(d.id)).length,c=r.firstChild;
@@ -93,27 +99,47 @@ function sync(){
  if($('prev').style.display==='block')renderPrev()}
 // ---------- export page ----------
 const opts=()=>({fmt:$('fmt').value,page:$('page').value,land:$('ori').value==='l',margin:+$('mar').value,q:+$('q').value,title:$('title').value.trim(),
- dealerOn:$('dOn').checked,dealer:$('dName').value.trim(),label:$('lab').value,legend:$('leg').checked});
+ dealerOn:$('dOn').checked,dealer:$('dName').value.trim(),label:$('lab').value,legend:$('leg').checked,msz:+$('msz').value,lfs:+$('lfs').value,mfs:+$('mfs').value,bw:+$('bw').value,lpos:$('lpos').value});
+const CU={},colr=(id,j)=>CU[id]&&CU[id].c||colorOf(j),nameOf=id=>CU[id]&&CU[id].n||D[id].name,
+ hex=c=>{const x=document.createElement('canvas').getContext('2d');x.fillStyle=c;return x.fillStyle};
 function pageSVG(o,prev){
  const ids=[...S];if(!ids.length)return null;const k0=96/25.4;let[wm,hm]=PAGES[o.page];if(o.land)[wm,hm]=[hm,wm];
- const pw=Math.round(wm*k0),ph=Math.round(hm*k0),m=o.margin*k0,W=pw-2*m,sts=new Set(ids.map(i=>D[i].st));
- const title=o.title||(sts.size===1?[...sts][0]+' – Districts':'Selected Districts – India');
- let y=m,out=`<text x="${pw/2}" y="${y+22}" text-anchor="middle" font-size="24" font-weight="700">${esc(title)}</text>`;y+=36;
- if(o.dealerOn){out+=`<text x="${m}" y="${y+16}" font-size="15">Dealer Name: ${esc(o.dealer)}</text><line x1="${m+98}" x2="${m+98+Math.max(235,o.dealer.length*9)}" y1="${y+19}" y2="${y+19}" stroke="#333"/>`;y+=28}
- let legH=0,leg='';
- if(o.legend){const rh=ids.length>60?15:20,fs=rh-7,lab=ids.map((id,j)=>`${j+1}. ${D[id].name}${sts.size>1?' ('+D[id].st+')':''}`);
-  const cw=Math.max(...lab.map(t=>t.length))*fs*.56+fs+22,cols=Math.max(1,Math.floor(W/cw)),rows=Math.ceil(ids.length/cols);legH=28+rows*rh+6;const ly=ph-m-legH;
-  leg=`<text x="${m}" y="${ly+16}" font-size="14" font-weight="700">Colour Code – Districts</text>`+ids.map((id,j)=>{const cx=m+Math.floor(j/rows)*cw,cy=ly+28+(j%rows)*rh;
-   return`<rect x="${cx}" y="${cy}" width="${fs}" height="${fs}" fill="${colorOf(j)}" stroke="#333" stroke-width=".8"/><text x="${cx+fs+6}" y="${cy+fs-1}" font-size="${fs}">${esc(lab[j])}</text>`}).join('')}
- const my=y+4,mh=ph-m-legH-(legH?10:0)-my,[x0,y0,x1,y1]=bboxOf(ids),bw=(x1-x0)||1,bh=(y1-y0)||1,kk=Math.min(W/bw,mh/bh)*.97,
-  tx=m+(W-bw*kk)/2-x0*kk,ty=my+(mh-bh*kk)/2-y0*kk;
- const paths=`<g transform="translate(${tx},${ty}) scale(${kk})" stroke="#222" stroke-width="${1.2/kk}" stroke-linejoin="round">`+ids.map((id,j)=>`<path d="${D[id].p}" fill="${colorOf(j)}"/>`).join('')+'</g>';
- let lb='';if(o.label!=='none')lb=ids.map((id,j)=>{const b=D[id].bb,cx=tx+(b[0]+b[2])/2*kk,cy=ty+(b[1]+b[3])/2*kk,sz=Math.min((b[2]-b[0])*kk,(b[3]-b[1])*kk),nm=o.label==='name',
-  fs=nm?Math.max(8,Math.min(12,sz/4)):Math.max(8,Math.min(14,sz/2));
-  return`<text x="${cx}" y="${cy}" dy=".35em" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${nm?esc(D[id].name):j+1}</text>`}).join('');
- const svgS=`<svg xmlns="http://www.w3.org/2000/svg" ${prev?'':`width="${pw}" height="${ph}"`} viewBox="0 0 ${pw} ${ph}" font-family="Arial,Helvetica,sans-serif"><rect width="${pw}" height="${ph}" fill="#fff"/>${out}${paths}${lb}${leg}</svg>`;
- return{svg:svgS,pw,ph,wm,hm}}
-function show(n){$('mapw').style.display=n===1?'':'none';$('prev').style.display=n===2?'block':'none';$('t1').classList.toggle('on',n===1);$('t2').classList.toggle('on',n===2);if(n===2)renderPrev()}
+ const pw=Math.round(wm*k0),ph=Math.round(hm*k0),m=o.margin*k0,sts=new Set(ids.map(i=>D[i].st)),multi=sts.size>1,
+  title=o.title||(multi?'Selected Districts – India':[...sts][0]+' – Districts'),top=m+36+(o.dealerOn?28:0),aw=pw-2*m,ah=ph-m-top,
+  fs=o.lfs,rh=Math.round(fs*1.5),col=ids.map((id,j)=>colr(id,j)),lab=ids.map((id,j)=>`${j+1}. ${nameOf(id)}${multi?' ('+D[id].st+')':''}`),
+  cw=Math.max(...lab.map(t=>t.length))*fs*.56+fs+22,[x0,y0,x1,y1]=bboxOf(ids),bw=(x1-x0)||1,bh=(y1-y0)||1;
+ const plan=pos=>{if(!o.legend)return{map:{x:m,y:top,w:aw,h:ah},leg:null};
+  if(pos==='bottom'){const cols=Math.max(1,Math.floor(aw/cw)),rows=Math.ceil(ids.length/cols),h=28+rows*rh+6;return{map:{x:m,y:top,w:aw,h:ah-h-10},leg:{x:m,y:ph-m-h,rows}}}
+  const rows=Math.max(1,Math.floor((ah-30)/rh)),cols=Math.ceil(ids.length/rows),w=cols*cw;return{map:{x:m,y:top,w:aw-w-14,h:ah},leg:{x:pw-m-w,y:top,rows}}};
+ const fit=Q=>Q.map.w>20&&Q.map.h>20?Math.min(Q.map.w/bw,Q.map.h/bh):0;
+ let pl=plan(o.lpos==='right'?'right':'bottom');if(o.lpos==='auto'){const a=plan('bottom'),b=plan('right');pl=fit(b)>fit(a)?b:a}
+ const kk=Math.max(.01,fit(pl)*.97*o.msz/100),M=pl.map,tx=M.x+(M.w-bw*kk)/2-x0*kk,ty=M.y+(M.h-bh*kk)/2-y0*kk;
+ const items=pl.leg?ids.map((id,j)=>({x:pl.leg.x+Math.floor(j/pl.leg.rows)*cw,y:pl.leg.y+28+(j%pl.leg.rows)*rh,t:lab[j],c:col[j]})):[];
+ const labels=o.label==='none'?[]:ids.map((id,j)=>{const b=D[id].bb,sz=Math.min((b[2]-b[0])*kk,(b[3]-b[1])*kk),nm=o.label==='name';
+  return{x:tx+(b[0]+b[2])/2*kk,y:ty+(b[1]+b[3])/2*kk,t:nm?nameOf(id):String(j+1),fs:Math.max(7,Math.min(o.mfs,nm?sz/3.5:sz/1.8))}});
+ const svgS=`<svg xmlns="http://www.w3.org/2000/svg" ${prev?'':`width="${pw}" height="${ph}"`} viewBox="0 0 ${pw} ${ph}" font-family="Arial,Helvetica,sans-serif"><rect width="${pw}" height="${ph}" fill="#fff"/>`
+ +`<text x="${pw/2}" y="${m+22}" text-anchor="middle" font-size="24" font-weight="700">${esc(title)}</text>`
+ +(o.dealerOn?`<text x="${m}" y="${m+52}" font-size="15">Dealer Name: ${esc(o.dealer)}</text><line x1="${m+98}" x2="${m+98+Math.max(235,o.dealer.length*9)}" y1="${m+55}" y2="${m+55}" stroke="#333"/>`:'')
+ +`<g transform="translate(${tx},${ty}) scale(${kk})" stroke="#222" stroke-width="${o.bw/kk}" stroke-linejoin="round">`+ids.map((id,j)=>`<path d="${D[id].p}" fill="${col[j]}"/>`).join('')+'</g>'
+ +labels.map(l=>`<text x="${l.x}" y="${l.y}" dy=".35em" text-anchor="middle" font-size="${l.fs}" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(l.t)}</text>`).join('')
+ +(pl.leg?`<text x="${pl.leg.x}" y="${pl.leg.y+16}" font-size="14" font-weight="700">Colour Code – Districts</text>`+items.map(i=>`<rect x="${i.x}" y="${i.y}" width="${fs}" height="${fs}" fill="${i.c}" stroke="#333" stroke-width=".8"/><text x="${i.x+fs+6}" y="${i.y+fs-1}" font-size="${fs}">${esc(i.t)}</text>`).join(''):'')+'</svg>';
+ return{svg:svgS,pw,ph,wm,hm,s:{title,m,ids,col,tx,ty,kk,labels,items,fs,rh,leg:pl.leg}}}
+async function pptEdit(r,o){const s=r.s,p=new PptxGenJS(),w=r.wm/25.4,h=r.hm/25.4,I=v=>v/96,hx=c=>hex(c).slice(1).toUpperCase();
+ p.defineLayout({name:'MAP',width:w,height:h});p.layout='MAP';const sl=p.addSlide(),F='Arial';
+ sl.addText(s.title,{x:0,y:I(s.m),w,h:.45,align:'center',fontSize:24,bold:true,fontFace:F});
+ if(o.dealerOn)sl.addText('Dealer Name: '+o.dealer,{x:I(s.m),y:I(s.m+36),w:5,h:.3,fontSize:14,fontFace:F});
+ s.ids.forEach((id,j)=>{const b=D[id].bb,bx=s.tx+b[0]*s.kk,by=s.ty+b[1]*s.kk,pts=[];
+  D[id].p.split(/(?=[MLZ])/).forEach(c=>{if(c[0]==='Z')pts.push({close:true});else if(c.length>1){const[x,y]=c.slice(1).split(',').map(Number),q={x:I(s.tx+x*s.kk-bx),y:I(s.ty+y*s.kk-by)};if(c[0]==='M')q.moveTo=true;pts.push(q)}});
+  sl.addShape('custGeom',{x:I(bx),y:I(by),w:Math.max(.01,I((b[2]-b[0])*s.kk)),h:Math.max(.01,I((b[3]-b[1])*s.kk)),fill:{color:hx(s.col[j])},line:{color:'222222',width:o.bw*.75},points:pts})});
+ s.labels.forEach(l=>sl.addText(l.t,{x:I(l.x)-.5,y:I(l.y)-.12,w:1,h:.24,align:'center',valign:'middle',fontSize:l.fs*.75,bold:true,margin:0,fontFace:F}));
+ if(s.leg){sl.addText('Colour Code – Districts',{x:I(s.leg.x),y:I(s.leg.y),w:4,h:.28,fontSize:11,bold:true,margin:0,fontFace:F});
+  s.items.forEach(i=>{sl.addShape('rect',{x:I(i.x),y:I(i.y),w:I(s.fs),h:I(s.fs),fill:{color:hx(i.c)},line:{color:'333333',width:.6}});
+   sl.addText(i.t,{x:I(i.x+s.fs+6),y:I(i.y-(s.rh-s.fs)/2),w:I(s.rh*0+220),h:I(s.rh),fontSize:s.fs*.75,valign:'middle',margin:0,fontFace:F})})}
+ await p.writeFile({fileName:'district-map.pptx'})}
+function show(n){['mapw','prev','cust'].forEach((x,i)=>$(x).style.display=i+1===n?(x==='mapw'?'':'block'):'none');[1,2,3].forEach(i=>$('t'+i).classList.toggle('on',i===n));if(n===2)renderPrev();if(n===3)renderCust()}
+function renderCust(){const ids=[...S];$('cust').innerHTML=(ids.length?'<button onclick="for(const k in CU)delete CU[k];renderCust();sync()">Reset customisations</button><p class="muted">Change colour or the name shown in map, legend and exports.</p>':'<p class="muted">Select districts first.</p>')
+ +ids.map((id,j)=>`<div class="cr"><b>${j+1}</b><input type="color" data-c="${id}" value="${hex(colr(id,j))}"><input data-n="${id}" value="${esc(nameOf(id))}"></div>`).join('')}
+$('cust').addEventListener('input',e=>{const t=e.target,k=t.dataset.c!==undefined?'c':'n',id=t.dataset[k];if(id===undefined)return;(CU[id]=CU[id]||{})[k]=t.value;sync()});
 function renderPrev(){const r=pageSVG(opts(),true);$('prev').innerHTML=r?`<div style="height:100%;aspect-ratio:${r.pw}/${r.ph};max-width:100%;margin:auto;background:#fff;box-shadow:0 2px 12px #0004">${r.svg.replace('<svg ','<svg style="width:100%;height:100%" ')}</div>`:'<p class="muted" style="padding:20px">Select districts to preview.</p>'}
 $('exp').addEventListener('input',()=>{if($('prev').style.display==='block')renderPrev()});
 // ---------- export ----------
@@ -123,11 +149,11 @@ const toCanvas=(svgS,pw,ph,sc)=>new Promise((ok,no)=>{const u=URL.createObjectUR
  im.onerror=()=>no(new Error('Render failed (try lower quality)'));im.src=u});
 async function doExport(){
  if(!S.size)return alert('Select at least one district first.');const o=opts(),btn=$('go');btn.disabled=true;btn.textContent='Exporting…';
- try{const r=pageSVG(o),c=await toCanvas(r.svg,r.pw,r.ph,o.q),name='district-map';
+ try{const r=pageSVG(o),c=o.fmt==='pptx'?null:await toCanvas(r.svg,r.pw,r.ph,o.q),name='district-map';
   if(o.fmt==='png')c.toBlob(b=>dl(b,name+'.png'));
   else if(o.fmt==='pdf'){const pdf=new window.jspdf.jsPDF({orientation:o.land?'l':'p',unit:'mm',format:o.page});
    pdf.addImage(c.toDataURL('image/jpeg',.95),'JPEG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight());pdf.save(name+'.pdf')}
-  else if(o.fmt==='pptx'){const p=new PptxGenJS(),w=r.wm/25.4,h=r.hm/25.4;p.defineLayout({name:'MAP',width:w,height:h});p.layout='MAP';
+  else if(o.fmt==='pptx')await pptEdit(r,o);else if(o.fmt==='pptxi'){const p=new PptxGenJS(),w=r.wm/25.4,h=r.hm/25.4;p.defineLayout({name:'MAP',width:w,height:h});p.layout='MAP';
    p.addSlide().addImage({data:c.toDataURL('image/png'),x:0,y:0,w,h});await p.writeFile({fileName:name+'.pptx'})}
   else{const d=window.docx,b64=c.toDataURL('image/png').split(',')[1],bytes=Uint8Array.from(atob(b64),ch=>ch.charCodeAt(0)),tw=mm=>Math.round(mm/25.4*1440),
    [a,b]=[Math.min(r.wm,r.hm),Math.max(r.wm,r.hm)];
