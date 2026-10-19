@@ -1,594 +1,140 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>India District Map Tool — map.irt.co.in</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>India District Map Tool</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
 <script src="india-map-paths.js"></script>
-<script src="district-data.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #F8FAFC;
-    --surface: #FFFFFF;
-    --surface2: #F1F5F9;
-    --border: #E2E8F0;
-    --border2: #CBD5E1;
-    --text: #0F172A;
-    --muted: #64748B;
-    --accent: #2563EB;
-    --accent-light: #DBEAFE;
-    --accent-hover: #1D4ED8;
-    --success: #16A34A;
-    --warning: #D97706;
-    --danger: #DC2626;
-    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-    --shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
-    --shadow-lg: 0 20px 40px rgba(0,0,0,.1), 0 8px 16px rgba(0,0,0,.06);
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    display: grid;
-    grid-template-columns: 380px 1fr;
-    grid-template-rows: 60px 1fr;
-    overflow: hidden;
-  }
-
-  /* ── HEADER ── */
-  header {
-    grid-column: 1/-1;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    gap: 16px;
-    box-shadow: var(--shadow);
-    z-index: 50;
-  }
-
-  .logo-mark {
-    width: 32px; height: 32px;
-    background: linear-gradient(135deg, #2563EB, #7C3AED);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; color: white; font-weight: 800;
-    letter-spacing: -1px;
-    flex-shrink: 0;
-  }
-
-  .logo-text {
-    font-size: 15px; font-weight: 700; color: var(--text);
-    letter-spacing: -0.3px;
-  }
-  .logo-domain {
-    font-size: 11px; color: var(--muted); font-weight: 400;
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  .header-spacer { flex: 1; }
-
-  .selection-pill {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--accent-light);
-    border: 1px solid #BFDBFE;
-    border-radius: 20px;
-    padding: 4px 12px;
-    font-size: 12px; font-weight: 600; color: var(--accent);
-  }
-
-  .header-btn {
-    display: flex; align-items: center; gap: 6px;
-    padding: 7px 14px; border-radius: 8px;
-    font-size: 13px; font-weight: 600;
-    cursor: pointer; border: none; font-family: inherit;
-    transition: all .2s; white-space: nowrap;
-  }
-  .header-btn-ghost {
-    background: transparent; color: var(--muted);
-    border: 1px solid var(--border);
-  }
-  .header-btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
-
-  /* ── SIDEBAR ── */
-  aside {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-  }
-
-  .sidebar-top {
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  /* Search */
-  .search-container { position: relative; }
-  .search-input {
-    width: 100%;
-    padding: 10px 14px 10px 40px;
-    background: var(--surface2);
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    font-size: 13px; font-family: inherit;
-    color: var(--text);
-    outline: none;
-    transition: all .2s;
-  }
-  .search-input:focus {
-    border-color: var(--accent);
-    background: white;
-    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
-  }
-  .search-input::placeholder { color: var(--muted); }
-  .search-icon {
-    position: absolute; left: 12px; top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-    pointer-events: none;
-  }
-
-  /* Search results dropdown */
-  .search-results {
-    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    box-shadow: var(--shadow-lg);
-    z-index: 100;
-    max-height: 280px;
-    overflow-y: auto;
-    display: none;
-  }
-  .search-results.open { display: block; }
-  .search-result-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; cursor: pointer;
-    transition: background .15s;
-    border-bottom: 1px solid var(--border);
-  }
-  .search-result-item:last-child { border-bottom: none; }
-  .search-result-item:hover { background: var(--accent-light); }
-  .result-type-badge {
-    font-size: 10px; font-weight: 700; padding: 2px 6px;
-    border-radius: 4px; letter-spacing: .5px; flex-shrink: 0;
-  }
-  .badge-state { background: #EEF2FF; color: #4338CA; }
-  .badge-district { background: #F0FDF4; color: #15803D; }
-  .result-name { font-size: 13px; font-weight: 500; flex: 1; }
-  .result-parent { font-size: 11px; color: var(--muted); }
-
-  /* ── SIDEBAR BODY ── */
-  .sidebar-body {
-    flex: 1; overflow-y: auto;
-    padding: 8px;
-  }
-
-  /* State card */
-  .state-card {
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 6px;
-    overflow: hidden;
-    transition: all .2s;
-  }
-  .state-card.selected { border-color: var(--accent); }
-  .state-card-header {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; cursor: pointer;
-    transition: background .15s;
-    user-select: none;
-  }
-  .state-card-header:hover { background: var(--surface2); }
-  .state-swatch {
-    width: 28px; height: 28px; border-radius: 6px;
-    border: 1.5px solid rgba(0,0,0,.08);
-    flex-shrink: 0; cursor: pointer;
-    position: relative;
-  }
-  .state-swatch input[type=color] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer;
-    width: 100%; height: 100%;
-  }
-  .state-card-name { font-size: 13px; font-weight: 600; flex: 1; }
-  .state-card-count {
-    font-size: 11px; font-family: 'JetBrains Mono', monospace;
-    color: var(--muted); background: var(--surface2);
-    padding: 2px 7px; border-radius: 10px; border: 1px solid var(--border);
-  }
-  .state-card-check {
-    width: 18px; height: 18px; border-radius: 4px;
-    background: var(--accent); border: none;
-    display: none; align-items: center; justify-content: center;
-    color: white; font-size: 11px; flex-shrink: 0;
-  }
-  .state-card.selected .state-card-check { display: flex; }
-  .state-expand-icon {
-    color: var(--muted); transition: transform .2s;
-    font-size: 12px;
-  }
-  .state-card.expanded .state-expand-icon { transform: rotate(180deg); }
-  .state-remove-btn {
-    width: 18px; height: 18px; border-radius: 4px;
-    background: #FEE2E2; border: none; cursor: pointer;
-    color: #DC2626; font-size: 12px; display: none;
-    align-items: center; justify-content: center;
-    flex-shrink: 0; transition: background .15s;
-  }
-  .state-card.selected .state-remove-btn { display: flex; }
-  .state-remove-btn:hover { background: #FECACA; }
-
-  /* District panel */
-  .district-panel {
-    display: none; padding: 0 10px 10px;
-    border-top: 1px solid var(--border);
-    background: var(--surface2);
-  }
-  .state-card.expanded .district-panel { display: block; }
-  .district-controls {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 0 8px;
-  }
-  .district-controls label { font-size: 11px; color: var(--muted); cursor: pointer; }
-  .select-all-btn, .clear-btn {
-    font-size: 10px; font-weight: 600; padding: 3px 8px;
-    border-radius: 5px; border: none; cursor: pointer;
-    font-family: inherit; transition: all .15s;
-  }
-  .select-all-btn { background: var(--accent-light); color: var(--accent); }
-  .select-all-btn:hover { background: #BFDBFE; }
-  .clear-btn { background: #FEE2E2; color: var(--danger); }
-  .clear-btn:hover { background: #FECACA; }
-
-  .district-tags { display: flex; flex-wrap: wrap; gap: 5px; }
-  .district-tag {
-    padding: 4px 9px; border-radius: 6px;
-    font-size: 11px; font-weight: 500; cursor: pointer;
-    transition: all .15s; border: 1.5px solid transparent;
-    white-space: nowrap;
-  }
-  .district-tag:not(.active) {
-    background: white; color: var(--muted);
-    border-color: var(--border);
-  }
-  .district-tag:not(.active):hover {
-    border-color: var(--border2); color: var(--text);
-    transform: translateY(-1px);
-  }
-  .district-tag.active {
-    color: white; border-color: transparent;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 6px rgba(0,0,0,.12);
-  }
-
-  /* ── SIDEBAR FOOTER ── */
-  .sidebar-footer {
-    padding: 12px;
-    border-top: 1px solid var(--border);
-    flex-shrink: 0;
-    background: var(--surface);
-  }
-
-  /* Preset bar */
-  .preset-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-  .preset-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
-  .preset-scroll::-webkit-scrollbar { height: 0; }
-  .preset-chip {
-    padding: 5px 11px; border-radius: 20px; white-space: nowrap;
-    font-size: 11px; font-weight: 600; cursor: pointer;
-    background: var(--surface2); color: var(--muted);
-    border: 1.5px solid var(--border); font-family: inherit;
-    transition: all .2s;
-  }
-  .preset-chip:hover { background: var(--accent-light); color: var(--accent); border-color: #93C5FD; }
-
-  /* Export buttons */
-  .export-row { display: flex; gap: 8px; margin-top: 10px; }
-  .export-btn {
-    flex: 1; padding: 9px; border-radius: 9px;
-    font-size: 12px; font-weight: 700; cursor: pointer;
-    border: none; font-family: inherit;
-    transition: all .2s;
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-  }
-  .export-png { background: #DCFCE7; color: #15803D; }
-  .export-png:hover { background: #BBF7D0; transform: translateY(-1px); }
-  .export-pdf { background: #FEF9C3; color: #A16207; }
-  .export-pdf:hover { background: #FEF08A; transform: translateY(-1px); }
-  .export-ppt { background: var(--accent-light); color: var(--accent); }
-  .export-ppt:hover { background: #BFDBFE; transform: translateY(-1px); }
-  .export-btn:active { transform: translateY(0); }
-
-  /* ── MAIN CANVAS ── */
-  main {
-    display: flex; flex-direction: column; overflow: hidden;
-    background: var(--bg);
-  }
-
-  .canvas-toolbar {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 8px 16px;
-    display: flex; align-items: center; gap: 10px;
-    flex-shrink: 0;
-  }
-  .toolbar-group { display: flex; align-items: center; gap: 6px; }
-  .toolbar-sep { width: 1px; height: 20px; background: var(--border); }
-  .toolbar-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
-  .toolbar-btn {
-    padding: 5px 10px; border-radius: 7px;
-    font-size: 11px; font-weight: 600; cursor: pointer;
-    background: var(--surface2); border: 1.5px solid var(--border);
-    color: var(--muted); font-family: inherit; transition: all .15s;
-  }
-  .toolbar-btn.active { background: var(--accent-light); border-color: #93C5FD; color: var(--accent); }
-  .toolbar-btn:hover { border-color: var(--border2); color: var(--text); }
-
-  .toolbar-input {
-    padding: 4px 8px; border-radius: 6px;
-    font-size: 11px; font-family: inherit;
-    background: var(--surface2); border: 1.5px solid var(--border);
-    color: var(--text); outline: none; width: 180px;
-  }
-  .toolbar-input:focus { border-color: var(--accent); }
-
-  select.toolbar-select {
-    padding: 4px 8px; border-radius: 6px;
-    font-size: 11px; font-family: inherit;
-    background: var(--surface2); border: 1.5px solid var(--border);
-    color: var(--text); outline: none; cursor: pointer;
-  }
-
-  .canvas-spacer { flex: 1; }
-
-  /* Map canvas area */
-  .canvas-wrap {
-    flex: 1; overflow: hidden;
-    display: flex; align-items: center; justify-content: center;
-    padding: 20px;
-    position: relative;
-    cursor: grab;
-  }
-  .canvas-wrap:active { cursor: grabbing; }
-
-  /* Empty state */
-  .empty-state {
-    text-align: center; color: var(--muted);
-    animation: fadeIn .4s ease;
-  }
-  .empty-icon {
-    width: 80px; height: 80px;
-    background: var(--surface2); border: 2px dashed var(--border2);
-    border-radius: 20px; margin: 0 auto 16px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 32px;
-  }
-  .empty-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-  .empty-sub { font-size: 13px; color: var(--muted); }
-
-  /* Map output */
-  #map-output {
-    background: white;
-    box-shadow: var(--shadow-lg);
-    border-radius: 8px;
-    overflow: visible;
-    transform-origin: center center;
-    transition: transform 0.1s ease-out;
-    border: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-
-  #map-svg { display: block; }
-
-  /* Loader */
-  .loading-bar {
-    position: fixed; top: 60px; left: 380px; right: 0;
-    height: 2px; background: var(--accent-light); z-index: 200;
-    display: none;
-  }
-  .loading-bar-inner {
-    height: 100%; background: var(--accent);
-    animation: loadAnim 1.2s ease infinite;
-  }
-  @keyframes loadAnim {
-    0% { width: 0%; margin-left: 0; }
-    50% { width: 70%; margin-left: 10%; }
-    100% { width: 0%; margin-left: 100%; }
-  }
-
-  /* Toast */
-  .toast-wrap {
-    position: fixed; bottom: 24px; right: 24px;
-    display: flex; flex-direction: column; gap: 8px;
-    z-index: 1000; pointer-events: none;
-  }
-  .toast {
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 10px; padding: 12px 16px;
-    font-size: 13px; font-weight: 500; color: var(--text);
-    box-shadow: var(--shadow-md);
-    display: flex; align-items: center; gap: 10px;
-    animation: toastIn .3s ease;
-    pointer-events: auto;
-  }
-  .toast.success { border-color: #86EFAC; background: #F0FDF4; }
-  .toast.error { border-color: #FCA5A5; background: #FFF1F2; }
-  .toast.info { border-color: #93C5FD; background: #EFF6FF; }
-  @keyframes toastIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  @keyframes toastOut {
-    to { transform: translateX(110%); opacity: 0; }
-  }
-
-  /* Scrollbars */
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
-
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes popIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
-
-  .map-render-anim { animation: popIn .25s ease; }
-
-  /* Color picker in toolbar */
-  .color-swatch-btn {
-    width: 28px; height: 28px; border-radius: 6px;
-    border: 1.5px solid var(--border); cursor: pointer;
-    position: relative; overflow: hidden;
-  }
-  .color-swatch-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-</style>
-</head>
-<body>
-
-<!-- Loading bar -->
-<div class="loading-bar" id="loading-bar">
-  <div class="loading-bar-inner"></div>
-</div>
-
-<!-- HEADER -->
-<header>
-  <div class="logo-mark">IN</div>
-  <div>
-    <div class="logo-text">India Map Tool</div>
-    <div class="logo-domain">map.irt.co.in</div>
-  </div>
-
-  <div class="header-spacer"></div>
-
-  <div class="selection-pill" id="sel-pill">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-    <span id="sel-count">0 states · 0 districts</span>
-  </div>
-
-  <button class="header-btn header-btn-ghost" onclick="clearAll()">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-    Clear All
-  </button>
-</header>
-
-<!-- SIDEBAR -->
+*{box-sizing:border-box}body{margin:0;font:14px/1.4 system-ui,Arial,sans-serif;height:100vh;display:grid;grid-template-columns:360px 1fr;grid-template-rows:52px 1fr;color:#0f172a;background:#f1f5f9}
+header{grid-column:1/-1;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:12px;padding:0 16px}
+header h1{font-size:16px;margin:0;flex:1}button{font:inherit;padding:6px 12px;border:1px solid #cbd5e1;background:#fff;border-radius:6px;cursor:pointer}
+button.p{background:#2563eb;color:#fff;border-color:#2563eb}button:disabled{opacity:.5}
+aside{background:#fff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;min-height:0}
+#q0{margin:10px;padding:8px;border:1px solid #cbd5e1;border-radius:6px}
+#list{flex:1;overflow:auto;padding:0 10px}.st{display:flex;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9}
+.nm{flex:1;cursor:pointer;font-weight:600}.nm i{font-style:normal;font-weight:400;color:#64748b;font-size:12px}
+.ds{padding:2px 0 6px 24px;display:grid;grid-template-columns:1fr 1fr;gap:2px 8px}.ds label{font-size:13px}.muted{color:#64748b}
+#exp{border-top:1px solid #e2e8f0;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;font-size:12px;background:#f8fafc}
+#exp label{display:flex;flex-direction:column;gap:2px;color:#475569}#exp .w{grid-column:1/-1}#exp input,#exp select{padding:4px;font:inherit}
+#exp .c{flex-direction:row;align-items:center;gap:5px}
+main{position:relative;min-height:0;display:flex;flex-direction:column}
+.bar{display:flex;gap:6px;padding:8px 12px;align-items:center}.bar span{flex:1;color:#475569}
+.tab.on{background:#0f172a;color:#fff}
+#mapw,#prev{flex:1;min-height:0;margin:0 12px 12px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
+#prev{display:none;padding:10px;background:#cbd5e1}#svg{width:100%;height:100%;touch-action:none;cursor:grab}
+#svg path{fill:#e8ecf1;stroke:#fff;stroke-width:.5;vector-effect:non-scaling-stroke;cursor:pointer}
+#svg path.on{stroke:#222;stroke-width:1.2}#svg path:hover{opacity:.75}
+</style></head><body>
+<header><h1>India District Map Tool</h1><button onclick="S.clear();sync()">Clear all</button></header>
 <aside>
-  <div class="sidebar-top">
-    <div class="search-container" id="search-container">
-      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-      </svg>
-      <input type="text" class="search-input" id="search-input"
-        placeholder="Search state or district…" autocomplete="off"
-        oninput="onSearch(this.value)"
-        onfocus="openSearch()"
-      >
-      <div class="search-results" id="search-results"></div>
-    </div>
-  </div>
-
-  <div class="sidebar-body" id="state-list"></div>
-
-  <div class="sidebar-footer">
-    <div class="preset-label">Quick Select</div>
-    <div class="preset-scroll">
-      <button class="preset-chip" onclick="preset('south')">🌴 South India</button>
-      <button class="preset-chip" onclick="preset('north')">🏔 North India</button>
-      <button class="preset-chip" onclick="preset('west')">🌊 West India</button>
-      <button class="preset-chip" onclick="preset('east')">🌿 East India</button>
-      <button class="preset-chip" onclick="preset('ne')">🍃 Northeast</button>
-      <button class="preset-chip" onclick="preset('central')">🏛 Central</button>
-      <button class="preset-chip" onclick="preset('all')">🇮🇳 All India</button>
-    </div>
-
-    <div class="export-row">
-      <button class="export-btn export-png" onclick="exportPNG()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-        PNG
-      </button>
-      <button class="export-btn export-pdf" onclick="exportPDF()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        PDF
-      </button>
-      <button class="export-btn export-ppt" onclick="exportPPT()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        PPT
-      </button>
-    </div>
-  </div>
+ <input id="q0" placeholder="Search state or district…" oninput="renderList(this.value)">
+ <div id="list"></div>
+ <div id="exp">
+  <label class="w">Title (blank = auto)<input id="title" placeholder="e.g. Marathwada Region, Maharashtra"></label>
+  <label class="c"><input type="checkbox" id="dOn" checked> Dealer Name line</label><label><input id="dName" placeholder="Dealer name (optional)"></label>
+  <label>Format<select id="fmt"><option value="pdf">PDF</option><option value="png">PNG</option><option value="pptx">PowerPoint</option><option value="docx">Word</option></select></label>
+  <label>Page<select id="page"><option value="a4">A4</option><option value="a3">A3</option><option value="letter">Letter</option></select></label>
+  <label>Orientation<select id="ori"><option value="l">Landscape</option><option value="p">Portrait</option></select></label>
+  <label>Printable margin<select id="mar"><option value="6">Narrow (6 mm)</option><option value="12" selected>Normal (12 mm)</option><option value="20">Wide (20 mm)</option></select></label>
+  <label>Quality<select id="q"><option value="1.5">Standard</option><option value="2.5" selected>High</option><option value="4">Max</option></select></label>
+  <label>Labels on map<select id="lab"><option value="num">Numbers</option><option value="name">District names</option><option value="none">None</option></select></label>
+  <label class="c"><input type="checkbox" id="leg" checked> Legend (colour code)</label>
+  <button class="p w" id="go" onclick="doExport()">Export</button>
+ </div>
 </aside>
-
-<!-- MAIN -->
 <main>
-  <div class="canvas-toolbar">
-    <div class="toolbar-group">
-      <span class="toolbar-label">Size</span>
-      <select class="toolbar-select" id="sz" onchange="renderMap()">
-        <option value="1280x720">1280×720 HD</option>
-        <option value="1920x1080">1920×1080 FHD</option>
-        <option value="2560x1440">2560×1440 2K</option>
-        <option value="1000x1000">1000×1000 Square</option>
-        <option value="794x1123">A4 Portrait</option>
-        <option value="1123x794">A4 Landscape</option>
-      </select>
-    </div>
-    <div class="toolbar-sep"></div>
-    <div class="toolbar-group">
-      <span class="toolbar-label">Title</span>
-      <input type="text" class="toolbar-input" id="title-input" placeholder="Add a title…" oninput="renderMap()">
-    </div>
-    <div class="toolbar-sep"></div>
-    <div class="toolbar-group">
-      <span class="toolbar-label">BG</span>
-      <div class="color-swatch-btn" id="bg-swatch" style="background:#FFFFFF">
-        <input type="color" value="#ffffff" oninput="document.getElementById('bg-swatch').style.background=this.value; renderMap()">
-      </div>
-    </div>
-    <div class="toolbar-sep"></div>
-    <div class="toolbar-group">
-      <button class="toolbar-btn active" id="labels-btn" onclick="toggleLabels()">Labels</button>
-      <button class="toolbar-btn active" id="legend-btn" onclick="toggleLegend()">Legend</button>
-      <button class="toolbar-btn active" id="autofit-btn" onclick="toggleAutofit()">Auto Fit</button>
-    </div>
-
-    <div class="canvas-spacer"></div>
-
-    <div class="toolbar-group">
-      <button class="toolbar-btn" onclick="zoomOut()" title="Zoom Out">−</button>
-      <button class="toolbar-btn" onclick="zoomReset()" title="Reset Zoom" style="font-size:10px">Reset</button>
-      <button class="toolbar-btn" onclick="zoomIn()" title="Zoom In">+</button>
-    </div>
-  </div>
-
-  <div class="canvas-wrap" id="canvas-wrap">
-    <div id="empty-state" class="empty-state">
-      <div class="empty-icon">🗺️</div>
-      <div class="empty-title">Koi state select nahi hua</div>
-      <div class="empty-sub">Left panel se state search karo ya preset use karo</div>
-    </div>
-    <div id="map-output" style="display:none">
-      <svg id="map-svg"></svg>
-    </div>
-  </div>
+ <div class="bar"><button class="tab on" id="t1" onclick="show(1)">Map</button><button class="tab" id="t2" onclick="show(2)">Export preview</button>
+  <span id="cnt"></span><button onclick="zoomSel()">Zoom to selection</button><button onclick="resetVB()">Reset</button></div>
+ <div id="mapw"><svg id="svg" viewBox="0 0 860 975"></svg></div><div id="prev"></div>
 </main>
-
-<!-- Toasts -->
-<div class="toast-wrap" id="toast-wrap"></div>
-
-<script src="app.js"></script>
-</body>
-</html>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Display-name fixes (state-qualified). Add more here if a name looks old/wrong.
+const AL={'Maharashtra|Aurangabad':'Sambhaji Nagar','Maharashtra|Osmanabad':'Dharashiv','Maharashtra|Bid':'Beed','Maharashtra|Garhchiroli':'Gadchiroli','Maharashtra|Gondiya':'Gondia','Maharashtra|Buldana':'Buldhana','Maharashtra|Raigarh':'Raigad'};
+const PAL=['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#46f0f0','#f032e6','#bcf60c','#fabebe','#008080','#e6beff','#9a6324','#fffac8','#800000','#aaffc3','#808000','#ffd8b1','#000075','#a9a9a9'];
+const colorOf=k=>k<PAL.length?PAL[k]:`hsl(${(k*137.5)%360},65%,${52+(k%3)*9}%)`;
+const PAGES={a4:[210,297],a3:[297,420],letter:[215.9,279.4]};
+const P=window.INDIA_MAP_PATHS,ST=Object.keys(P).sort(),D=[],BY={},S=new Set();
+ST.forEach(s=>{BY[s]=[];P[s].s.forEach(sh=>{const n=sh.p.match(/-?\d+\.?\d*/g).map(Number);let a=1e9,b=1e9,c=-1e9,d=-1e9;
+ for(let i=0;i<n.length;i+=2){a=Math.min(a,n[i]);c=Math.max(c,n[i]);b=Math.min(b,n[i+1]);d=Math.max(d,n[i+1])}
+ const o={id:D.length,st:s,raw:sh.n,name:AL[s+'|'+sh.n]||sh.n,p:sh.p,bb:[a,b,c,d]};D.push(o);BY[s].push(o)})});
+// ---------- map ----------
+const svg=$('svg');svg.innerHTML=D.map(d=>`<path data-id="${d.id}" d="${d.p}"><title>${esc(d.name)}, ${esc(d.st)}</title></path>`).join('');
+const pathEls=[...svg.querySelectorAll('path')];let vb=[0,0,860,975];
+const setVB=()=>svg.setAttribute('viewBox',vb.join(' ')),resetVB=()=>{vb=[0,0,860,975];setVB()};
+function bboxOf(ids){let a=1e9,b=1e9,c=-1e9,d=-1e9;ids.forEach(i=>{const x=D[i].bb;a=Math.min(a,x[0]);b=Math.min(b,x[1]);c=Math.max(c,x[2]);d=Math.max(d,x[3])});return[a,b,c,d]}
+function zoomSel(){if(!S.size)return;const[a,b,c,d]=bboxOf([...S]);vb=[a-15,b-15,c-a+30,d-b+30];setVB()}
+const pt=e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse())};
+svg.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY>0?1.15:1/1.15,p=pt(e);vb=[p.x-(p.x-vb[0])*f,p.y-(p.y-vb[1])*f,vb[2]*f,vb[3]*f];setVB()},{passive:false});
+let drag=null,moved=0;
+svg.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];moved=0});
+addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag[0],dy=e.clientY-drag[1];moved+=Math.abs(dx)+Math.abs(dy);
+ const u=Math.max(vb[2]/svg.clientWidth,vb[3]/svg.clientHeight);vb[0]-=dx*u;vb[1]-=dy*u;drag=[e.clientX,e.clientY];setVB()});
+addEventListener('pointerup',()=>drag=null);
+svg.addEventListener('click',e=>{if(moved>5)return;const t=e.target.closest('path');if(t)toggle(+t.dataset.id)});
+function toggle(id){S.has(id)?S.delete(id):S.add(id);sync()}
+// ---------- sidebar ----------
+function renderList(q=''){q=q.trim().toLowerCase();let h='';
+ ST.forEach(s=>{const sm=s.toLowerCase().includes(q);const m=BY[s].filter(d=>!q||sm||d.name.toLowerCase().includes(q)||d.raw.toLowerCase().includes(q));if(!m.length)return;
+  h+=`<div class="st" data-s="${esc(s)}"><input type="checkbox" data-st="${esc(s)}"><span class="nm">${esc(s)} <i></i></span></div><div class="ds" ${q?'':'hidden'}>${m.map(d=>`<label><input type="checkbox" data-d="${d.id}"> ${esc(d.name)}</label>`).join('')}</div>`});
+ $('list').innerHTML=h||'<p class="muted">No match</p>';sync()}
+$('list').addEventListener('click',e=>{const n=e.target.closest('.nm');if(n){const b=n.parentElement.nextElementSibling;b.hidden=!b.hidden}});
+$('list').addEventListener('change',e=>{const t=e.target;
+ if(t.dataset.d!==undefined){t.checked?S.add(+t.dataset.d):S.delete(+t.dataset.d)}
+ else if(t.dataset.st){BY[t.dataset.st].forEach(d=>t.checked?S.add(d.id):S.delete(d.id))}sync()});
+function sync(){
+ const ids=[...S],col={};ids.forEach((id,k)=>col[id]=colorOf(k));
+ pathEls.forEach((el,id)=>{const on=S.has(id);el.classList.toggle('on',on);on?el.style.fill=col[id]:el.style.removeProperty('fill')});
+ document.querySelectorAll('input[data-d]').forEach(i=>i.checked=S.has(+i.dataset.d));
+ document.querySelectorAll('.st').forEach(r=>{const s=r.dataset.s,n=BY[s].filter(d=>S.has(d.id)).length,c=r.firstChild;
+  c.checked=n===BY[s].length;c.indeterminate=n>0&&n<BY[s].length;r.querySelector('i').textContent=`${n}/${BY[s].length}`});
+ const ss=new Set(ids.map(i=>D[i].st));$('cnt').textContent=`${ids.length} district(s) from ${ss.size} state(s) selected`;
+ if($('prev').style.display==='block')renderPrev()}
+// ---------- export page ----------
+const opts=()=>({fmt:$('fmt').value,page:$('page').value,land:$('ori').value==='l',margin:+$('mar').value,q:+$('q').value,title:$('title').value.trim(),
+ dealerOn:$('dOn').checked,dealer:$('dName').value.trim(),label:$('lab').value,legend:$('leg').checked});
+function pageSVG(o,prev){
+ const ids=[...S];if(!ids.length)return null;const k0=96/25.4;let[wm,hm]=PAGES[o.page];if(o.land)[wm,hm]=[hm,wm];
+ const pw=Math.round(wm*k0),ph=Math.round(hm*k0),m=o.margin*k0,W=pw-2*m,sts=new Set(ids.map(i=>D[i].st));
+ const title=o.title||(sts.size===1?[...sts][0]+' – Districts':'Selected Districts – India');
+ let y=m,out=`<text x="${pw/2}" y="${y+22}" text-anchor="middle" font-size="24" font-weight="700">${esc(title)}</text>`;y+=36;
+ if(o.dealerOn){out+=`<text x="${m}" y="${y+16}" font-size="15">Dealer Name: ${esc(o.dealer)}</text><line x1="${m+98}" x2="${m+98+Math.max(235,o.dealer.length*9)}" y1="${y+19}" y2="${y+19}" stroke="#333"/>`;y+=28}
+ let legH=0,leg='';
+ if(o.legend){const rh=ids.length>60?15:20,fs=rh-7,lab=ids.map((id,j)=>`${j+1}. ${D[id].name}${sts.size>1?' ('+D[id].st+')':''}`);
+  const cw=Math.max(...lab.map(t=>t.length))*fs*.56+fs+22,cols=Math.max(1,Math.floor(W/cw)),rows=Math.ceil(ids.length/cols);legH=28+rows*rh+6;const ly=ph-m-legH;
+  leg=`<text x="${m}" y="${ly+16}" font-size="14" font-weight="700">Colour Code – Districts</text>`+ids.map((id,j)=>{const cx=m+Math.floor(j/rows)*cw,cy=ly+28+(j%rows)*rh;
+   return`<rect x="${cx}" y="${cy}" width="${fs}" height="${fs}" fill="${colorOf(j)}" stroke="#333" stroke-width=".8"/><text x="${cx+fs+6}" y="${cy+fs-1}" font-size="${fs}">${esc(lab[j])}</text>`}).join('')}
+ const my=y+4,mh=ph-m-legH-(legH?10:0)-my,[x0,y0,x1,y1]=bboxOf(ids),bw=(x1-x0)||1,bh=(y1-y0)||1,kk=Math.min(W/bw,mh/bh)*.97,
+  tx=m+(W-bw*kk)/2-x0*kk,ty=my+(mh-bh*kk)/2-y0*kk;
+ const paths=`<g transform="translate(${tx},${ty}) scale(${kk})" stroke="#222" stroke-width="${1.2/kk}" stroke-linejoin="round">`+ids.map((id,j)=>`<path d="${D[id].p}" fill="${colorOf(j)}"/>`).join('')+'</g>';
+ let lb='';if(o.label!=='none')lb=ids.map((id,j)=>{const b=D[id].bb,cx=tx+(b[0]+b[2])/2*kk,cy=ty+(b[1]+b[3])/2*kk,sz=Math.min((b[2]-b[0])*kk,(b[3]-b[1])*kk),nm=o.label==='name',
+  fs=nm?Math.max(8,Math.min(12,sz/4)):Math.max(8,Math.min(14,sz/2));
+  return`<text x="${cx}" y="${cy}" dy=".35em" text-anchor="middle" font-size="${fs}" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${nm?esc(D[id].name):j+1}</text>`}).join('');
+ const svgS=`<svg xmlns="http://www.w3.org/2000/svg" ${prev?'':`width="${pw}" height="${ph}"`} viewBox="0 0 ${pw} ${ph}" font-family="Arial,Helvetica,sans-serif"><rect width="${pw}" height="${ph}" fill="#fff"/>${out}${paths}${lb}${leg}</svg>`;
+ return{svg:svgS,pw,ph,wm,hm}}
+function show(n){$('mapw').style.display=n===1?'':'none';$('prev').style.display=n===2?'block':'none';$('t1').classList.toggle('on',n===1);$('t2').classList.toggle('on',n===2);if(n===2)renderPrev()}
+function renderPrev(){const r=pageSVG(opts(),true);$('prev').innerHTML=r?`<div style="height:100%;aspect-ratio:${r.pw}/${r.ph};max-width:100%;margin:auto;background:#fff;box-shadow:0 2px 12px #0004">${r.svg.replace('<svg ','<svg style="width:100%;height:100%" ')}</div>`:'<p class="muted" style="padding:20px">Select districts to preview.</p>'}
+$('exp').addEventListener('input',()=>{if($('prev').style.display==='block')renderPrev()});
+// ---------- export ----------
+const dl=(b,n)=>{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)};
+const toCanvas=(svgS,pw,ph,sc)=>new Promise((ok,no)=>{const u=URL.createObjectURL(new Blob([svgS],{type:'image/svg+xml'})),im=new Image();
+ im.onload=()=>{const c=document.createElement('canvas');c.width=Math.round(pw*sc);c.height=Math.round(ph*sc);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(u);ok(c)};
+ im.onerror=()=>no(new Error('Render failed (try lower quality)'));im.src=u});
+async function doExport(){
+ if(!S.size)return alert('Select at least one district first.');const o=opts(),btn=$('go');btn.disabled=true;btn.textContent='Exporting…';
+ try{const r=pageSVG(o),c=await toCanvas(r.svg,r.pw,r.ph,o.q),name='district-map';
+  if(o.fmt==='png')c.toBlob(b=>dl(b,name+'.png'));
+  else if(o.fmt==='pdf'){const pdf=new window.jspdf.jsPDF({orientation:o.land?'l':'p',unit:'mm',format:o.page});
+   pdf.addImage(c.toDataURL('image/jpeg',.95),'JPEG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight());pdf.save(name+'.pdf')}
+  else if(o.fmt==='pptx'){const p=new PptxGenJS(),w=r.wm/25.4,h=r.hm/25.4;p.defineLayout({name:'MAP',width:w,height:h});p.layout='MAP';
+   p.addSlide().addImage({data:c.toDataURL('image/png'),x:0,y:0,w,h});await p.writeFile({fileName:name+'.pptx'})}
+  else{const d=window.docx,b64=c.toDataURL('image/png').split(',')[1],bytes=Uint8Array.from(atob(b64),ch=>ch.charCodeAt(0)),tw=mm=>Math.round(mm/25.4*1440),
+   [a,b]=[Math.min(r.wm,r.hm),Math.max(r.wm,r.hm)];
+   const doc=new d.Document({sections:[{properties:{page:{size:{width:tw(a),height:tw(b),orientation:o.land?d.PageOrientation.LANDSCAPE:d.PageOrientation.PORTRAIT},margin:{top:0,right:0,bottom:0,left:0}}},
+    children:[new d.Paragraph({spacing:{before:0,after:0,line:240},children:[new d.ImageRun({type:'png',data:bytes,transformation:{width:r.pw-4,height:r.ph-14}})]})]}]});
+   dl(await d.Packer.toBlob(doc),name+'.docx')}
+ }catch(err){alert('Export failed: '+err.message)}
+ btn.disabled=false;btn.textContent='Export'}
+renderList();
+</script></body></html>
