@@ -1,44 +1,28 @@
 # 🗺️ India District Map Tool
 
-> Search any state or district → select → export as PNG / PDF / PPT
+Pick states or districts, colour them, and export a clean map as PDF, PNG, SVG, PowerPoint or Word. It runs in the browser, so there is nothing to install.
 
-**Live:** [map.irt.co.in](https://map.irt.co.in) &nbsp;|&nbsp; **Dev:** GitHub Pages
+**Live:** map.irt.co.in
 
----
+## How to use
+1. Tick a state, or open it and tick single districts. The zone buttons (Northern, Central...) select a whole zone.
+2. Check the **Export preview** tab. Set the title, page size, orientation, map size and label size there.
+3. Pick a format and press **Export**.
 
-## Stack
-| Layer | Tech |
-|---|---|
-| UI | HTML5 + Tailwind CSS |
-| Search | Fuse.js (fuzzy) |
-| Map | Pure SVG |
-| Export PPT | PptxGenJS (client-side) |
-| Export PDF | jsPDF + html2canvas |
-| Hosting | GitHub Pages → Hostinger |
+Use *Shades per state* in Colours when you pick more than one state. *PowerPoint (editable shapes)* gives you slides you can still edit.
 
-## Data
-- **781 districts** across 36 States/UTs
-- Sources: PPT + LGD (lgdirectory.gov.in) + Gazette 2020–23
-- All corrections documented in `district-data.js`
+## Files in this repo
+- `index.html` - the whole app
+- `india-map-paths.js` - the map data (36 states and UTs)
+- `.github/workflows/deploy.yml` - publishes the site on GitHub Pages
 
-## Local Dev
-```bash
-# Koi build step nahi — seedha open karo
-open index.html
-# Ya live server use karo
-npx serve .
-```
+## Updating
+Edit a file, commit, push to `main`. The site updates in a minute or two.
 
-## Deploy
-Push to `main` → GitHub Actions → GitHub Pages auto deploy.
+To fix a district name, find the `AL` list in `index.html`. Each line looks like `Maharashtra:Aurangabad>Sambhaji Nagar`.
 
-## Folder Structure
-```
-india-map-tool/
-├── index.html          # Main app
-├── app.js              # All logic (Fuse, render, export)
-├── district-data.js    # Verified district data
-└── .github/
-    └── workflows/
-        └── deploy.yml  # CI/CD
-```
+## Known gaps
+- Rajasthan still has the older 2023 districts. Nine were abolished in Dec 2024 and show a warning sign in the list.
+- Some newer districts are missing from the map data (Vav-Tharad, Maihar, Mauganj, Pandhurna, newer Ladakh districts).
+- One Assam shape has no name.
+- PDF, PNG and Word hold an image. SVG and editable PowerPoint stay sharp at any size.
