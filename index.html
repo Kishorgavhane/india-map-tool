@@ -38,15 +38,16 @@ main{position:relative;min-height:0;display:flex;flex-direction:column}
   <label class="w">Text to print on page (optional, multi-line)<textarea id="note" rows="2" placeholder="e.g. Dealer: ABC Motors, Pune"></textarea></label>
   <label>Format<select id="fmt"><option value="pdf">PDF</option><option value="png">PNG</option><option value="pptx">PowerPoint (editable shapes)</option><option value="pptxi">PowerPoint (picture)</option><option value="docx">Word</option></select></label>
   <label>Page<select id="page"><option value="a4">A4</option><option value="a3">A3</option><option value="letter">Letter</option></select></label>
-  <label>Orientation<select id="ori"><option value="l">Landscape</option><option value="p">Portrait</option></select></label>
+  <label>Orientation<select id="ori"><option value="a">Auto (best fit)</option><option value="l">Landscape</option><option value="p">Portrait</option></select></label>
   <label>Printable margin<select id="mar"><option value="6">Narrow (6 mm)</option><option value="12" selected>Normal (12 mm)</option><option value="20">Wide (20 mm)</option></select></label>
   <label>Quality<select id="q"><option value="1.5">Standard</option><option value="2.5" selected>High</option><option value="4">Max</option></select></label>
-  <label>Labels on map<select id="lab"><option value="num">Numbers</option><option value="name">District names</option><option value="none">None</option></select></label>
+  <label>Labels on map<select id="lab"><option value="name">District names</option><option value="num">Numbers</option><option value="none">None</option></select></label>
   <label class="c"><input type="checkbox" id="leg" checked> Legend (colour code)</label>
   <label>Map size %<input type="range" id="msz" min="40" max="100" value="100"></label>
   <label>Legend text (px)<input type="range" id="lfs" min="8" max="22" value="12"></label>
   <label>Map label size<input type="range" id="mfs" min="6" max="24" value="13"></label>
   <label>Boundary width<input type="range" id="bw" min="0.4" max="3" step="0.2" value="1.2"></label>
+  <label>State border<input type="range" id="sbw" min="0" max="4" step="0.2" value="2"></label>
   <label class="w">Legend position<select id="lpos"><option value="auto">Auto (gives bigger map)</option><option value="right">Right side</option><option value="bottom">Bottom</option></select></label>
   <button class="p w" id="go" onclick="doExport()">Export</button>
  </div>
@@ -128,43 +129,73 @@ function sync(){
  const ss=new Set(ids.map(i=>D[i].st));$('cnt').textContent=`${ids.length} district(s) from ${ss.size} state(s) selected`;
  if($('prev').style.display==='block')renderPrev()}
 // ---------- export page ----------
-const opts=()=>({fmt:$('fmt').value,page:$('page').value,land:$('ori').value==='l',margin:+$('mar').value,q:+$('q').value,title:$('title').value.trim(),
+const opts=()=>({fmt:$('fmt').value,page:$('page').value,ori:$('ori').value,sbw:+$('sbw').value,margin:+$('mar').value,q:+$('q').value,title:$('title').value.trim(),
  note:$('note').value.replace(/\s+$/,''),label:$('lab').value,legend:$('leg').checked,msz:+$('msz').value,lfs:+$('lfs').value,mfs:+$('mfs').value,bw:+$('bw').value,lpos:$('lpos').value});
 const CU={},colr=(id,j)=>CU[id]&&CU[id].c||colorOf(j),nameOf=id=>CU[id]&&CU[id].n||D[id].name,
  hex=c=>{const x=document.createElement('canvas').getContext('2d');x.fillStyle=c;return x.fillStyle};
+const sp=t=>{const w=t.split(' ');if(w.length<2)return[t];let b=1,bd=1e9;for(let i=1;i<w.length;i++){const d=Math.abs(w.slice(0,i).join(' ').length-t.length/2);if(d<bd){bd=d;b=i}}return[w.slice(0,b).join(' '),w.slice(b).join(' ')]};
+function ringsOf(d){if(d.r)return d.r;const rs=[];d.p.split('Z').forEach(u=>{const n=u.match(/-?\d+\.?\d*/g);if(!n||n.length<6)return;const pts=[];for(let i=0;i<n.length;i+=2)pts.push([+n[i],+n[i+1]]);const st=Math.max(1,Math.floor(pts.length/150));rs.push(pts.filter((_,i)=>i%st===0))});return d.r=rs}
+function pole(d){if(d.po)return d.po;const R=ringsOf(d),[a,b,c,e]=d.bb;let best=[(a+c)/2,(b+e)/2,0];
+ const dist=(x,y)=>{let ins=false,md=1e18;for(const r of R)for(let i=0,j=r.length-1;i<r.length;j=i++){const[x1,y1]=r[i],[x2,y2]=r[j];if((y1>y)!==(y2>y)&&x<(x2-x1)*(y-y1)/(y2-y1)+x1)ins=!ins;const dx=x2-x1,dy=y2-y1,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((x-x1)*dx+(y-y1)*dy)/l)):0,px=x1+t*dx-x,py=y1+t*dy-y;md=Math.min(md,px*px+py*py)}return ins?Math.sqrt(md):-Math.sqrt(md)};
+ let cx=(a+c)/2,cy=(b+e)/2,w=(c-a)/2,h=(e-b)/2;
+ for(let it=0;it<3;it++){let bb=best;for(let i=0;i<=6;i++)for(let j=0;j<=6;j++){const x=cx-w+w*i/3,y=cy-h+h*j/3,v=dist(x,y);if(v>bb[2])bb=[x,y,v]}best=bb;cx=best[0];cy=best[1];w/=3;h/=3}
+ return d.po=best}
+function layoutLabels(o,ids,kk,tx,ty,pw,ph,ctr){
+ const placed=[],res=[],hit=q=>placed.some(a=>q.x<a.x+a.w&&q.x+q.w>a.x&&q.y<a.y+a.h&&q.y+q.h>a.y),
+  fitF=(ls,r)=>{for(let f=o.mfs;f>=6;f-=.5)if(Math.hypot(Math.max(...ls.map(l=>l.length))*f*.28,ls.length*f*.575)<=r*1.08)return f;return 0},
+  box=(ls,f,cx,cy)=>{const w=Math.max(...ls.map(l=>l.length))*f*.56+2,h=ls.length*f*1.15;return{x:cx-w/2,y:cy-h/2,w,h}};
+ ids.map((id,j)=>j).sort((a,b)=>pole(D[ids[b]])[2]-pole(D[ids[a]])[2]).forEach(j=>{
+  const id=ids[j],po=pole(D[id]),px=tx+po[0]*kk,py=ty+po[1]*kk,r=po[2]*kk,txt=o.label==='name'?nameOf(id):String(j+1),c1=[txt],c2=sp(txt),
+   f1=fitF(c1,r),f2=c2.length>1?fitF(c2,r):0,ls=f2>f1?c2:c1,f=Math.max(f1,f2);let L=null;
+  if(f){const b=box(ls,f,px,py);if(!hit(b))L={lines:ls,fs:f,x:px,y:py,b}}
+  if(!L){const cl=txt.length>14?c2:c1,fs=Math.max(6.5,Math.min(o.mfs,9)),a0=Math.atan2(py-ctr[1],px-ctr[0]),b0=box(cl,fs,0,0);
+   search:for(let d=r+8;d<r+160;d+=12)for(const da of[0,.5,-.5,1,-1,1.6,-1.6,2.4,-2.4,3.14]){const a=a0+da,ext=Math.abs(Math.cos(a))*b0.w/2+Math.abs(Math.sin(a))*b0.h/2,cx=px+Math.cos(a)*(d+ext),cy=py+Math.sin(a)*(d+ext),b=box(cl,fs,cx,cy);
+    if(b.x>3&&b.y>3&&b.x+b.w<pw-3&&b.y+b.h<ph-3&&!hit(b)){L={lines:cl,fs,x:cx,y:cy,b,ln:[px,py,cx-Math.cos(a)*ext,cy-Math.sin(a)*ext]};break search}}
+   if(!L)L={lines:cl,fs,x:px,y:py,b:box(cl,fs,px,py)}}
+  placed.push({x:L.b.x-1,y:L.b.y-1,w:L.b.w+2,h:L.b.h+2});L.nm=nameOf(id);res[j]=L});return res}
 function pageSVG(o,prev){
- const ids=[...S];if(!ids.length)return null;const k0=96/25.4;let[wm,hm]=PAGES[o.page];if(o.land)[wm,hm]=[hm,wm];
+ if(o.ori==='a'&&!o._r){const a=pageSVG({...o,ori:'l',_r:1},prev),b=pageSVG({...o,ori:'p',_r:1},prev);return a&&b?(a.s.kk>=b.s.kk?a:b):null}
+ const ids=[...S];if(!ids.length)return null;const k0=96/25.4;let[wm,hm]=PAGES[o.page];if(o.ori==='l')[wm,hm]=[hm,wm];
  const pw=Math.round(wm*k0),ph=Math.round(hm*k0),m=o.margin*k0,sts=new Set(ids.map(i=>D[i].st)),multi=sts.size>1,
   title=o.title||(multi?'Selected Districts – India':[...sts][0]+' – Districts'),nl=o.note?o.note.split('\n').length:0,top=m+36+(nl?nl*20+8:0),aw=pw-2*m,ah=ph-m-top,
   fs=o.lfs,rh=Math.round(fs*1.5),col=ids.map((id,j)=>colr(id,j)),lab=ids.map((id,j)=>`${j+1}. ${nameOf(id)}${multi?' ('+D[id].st+')':''}`),
   cw=Math.max(...lab.map(t=>t.length))*fs*.56+fs+22,[x0,y0,x1,y1]=bboxOf(ids),bw=(x1-x0)||1,bh=(y1-y0)||1;
  const plan=pos=>{if(!o.legend)return{map:{x:m,y:top,w:aw,h:ah},leg:null};
-  if(pos==='bottom'){const cols=Math.max(1,Math.floor(aw/cw)),rows=Math.ceil(ids.length/cols),h=28+rows*rh+6;return{map:{x:m,y:top,w:aw,h:ah-h-10},leg:{x:m,y:ph-m-h,rows}}}
-  const rows=Math.max(1,Math.floor((ah-30)/rh)),cols=Math.ceil(ids.length/rows),w=cols*cw;return{map:{x:m,y:top,w:aw-w-14,h:ah},leg:{x:pw-m-w,y:top,rows}}};
+  if(pos==='bottom'){const cols=Math.max(1,Math.floor(aw/cw)),rows=Math.ceil(ids.length/cols),h=28+rows*rh+6;return{map:{x:m,y:top,w:aw,h:ah-h-10},leg:{x:m,y:ph-m-h,rows,w:aw}}}
+  const rows=Math.max(1,Math.floor((ah-30)/rh)),cols=Math.ceil(ids.length/rows),w=cols*cw;return{map:{x:m,y:top,w:aw-w-14,h:ah},leg:{x:pw-m-w,y:top,rows,w}}};
  const fit=Q=>Q.map.w>20&&Q.map.h>20?Math.min(Q.map.w/bw,Q.map.h/bh):0;
  let pl=plan(o.lpos==='right'?'right':'bottom');if(o.lpos==='auto'){const a=plan('bottom'),b=plan('right');pl=fit(b)>fit(a)?b:a}
  const kk=Math.max(.01,fit(pl)*.97*o.msz/100),M=pl.map,tx=M.x+(M.w-bw*kk)/2-x0*kk,ty=M.y+(M.h-bh*kk)/2-y0*kk;
  const items=pl.leg?ids.map((id,j)=>({x:pl.leg.x+Math.floor(j/pl.leg.rows)*cw,y:pl.leg.y+28+(j%pl.leg.rows)*rh,t:lab[j],c:col[j]})):[];
- const labels=o.label==='none'?[]:ids.map((id,j)=>{const b=D[id].bb,sz=Math.min((b[2]-b[0])*kk,(b[3]-b[1])*kk),nm=o.label==='name';
-  return{x:tx+(b[0]+b[2])/2*kk,y:ty+(b[1]+b[3])/2*kk,t:nm?nameOf(id):String(j+1),fs:Math.max(7,Math.min(o.mfs,nm?sz/3.5:sz/1.8))}});
+ const labels=o.label==='none'?[]:layoutLabels(o,ids,kk,tx,ty,pw,ph,[M.x+M.w/2,M.y+M.h/2]);
+ const by={};ids.forEach((id,j)=>(by[D[id].st]=by[D[id].st]||[]).push(j));
+ const mp=Object.values(by).map(js=>(o.sbw>0?`<g fill="#000" stroke="#000" stroke-width="${2*o.sbw/kk}" stroke-linejoin="round">${js.map(j=>`<path d="${D[ids[j]].p}"/>`).join('')}</g>`:'')
+  +`<g stroke="#222" stroke-width="${o.bw/kk}" stroke-linejoin="round">${js.map(j=>`<path d="${D[ids[j]].p}" fill="${col[j]}"/>`).join('')}</g>`).join('');
+ const lb=labels.map(l=>(l.ln?`<line x1="${l.ln[0]}" y1="${l.ln[1]}" x2="${l.ln[2]}" y2="${l.ln[3]}" stroke="#333" stroke-width=".8"/><circle cx="${l.ln[0]}" cy="${l.ln[1]}" r="2.2" fill="#111"/>`:'')
+  +l.lines.map((t,i)=>`<text x="${l.x}" y="${l.y+(i-(l.lines.length-1)/2)*l.fs*1.15}" dy=".35em" text-anchor="middle" font-size="${l.fs}" font-weight="700" fill="#111" stroke="#fff" stroke-width="2.5" paint-order="stroke">${esc(t)}</text>`).join('')).join('');
+ const bk=pl.leg&&pl.leg.w>340;
  const svgS=`<svg xmlns="http://www.w3.org/2000/svg" ${prev?'':`width="${pw}" height="${ph}"`} viewBox="0 0 ${pw} ${ph}" font-family="Arial,Helvetica,sans-serif"><rect width="${pw}" height="${ph}" fill="#fff"/>`
  +`<text x="${pw/2}" y="${m+22}" text-anchor="middle" font-size="24" font-weight="700">${esc(title)}</text>`
  +(nl?o.note.split('\n').map((t,i)=>`<text x="${pw/2}" y="${m+54+i*20}" text-anchor="middle" font-size="15">${esc(t)}</text>`).join(''):'')
- +`<g transform="translate(${tx},${ty}) scale(${kk})" stroke="#222" stroke-width="${o.bw/kk}" stroke-linejoin="round">`+ids.map((id,j)=>`<path d="${D[id].p}" fill="${col[j]}"/>`).join('')+'</g>'
- +labels.map(l=>`<text x="${l.x}" y="${l.y}" dy=".35em" text-anchor="middle" font-size="${l.fs}" font-weight="700" fill="#111" stroke="#fff" stroke-width="3" paint-order="stroke">${esc(l.t)}</text>`).join('')
- +(pl.leg?`<text x="${pl.leg.x}" y="${pl.leg.y+16}" font-size="14" font-weight="700">Colour Code – Districts</text>`+items.map(i=>`<rect x="${i.x}" y="${i.y}" width="${fs}" height="${fs}" fill="${i.c}" stroke="#333" stroke-width=".8"/><text x="${i.x+fs+6}" y="${i.y+fs-1}" font-size="${fs}">${esc(i.t)}</text>`).join(''):'')+'</svg>';
- return{svg:svgS,pw,ph,wm,hm,s:{title,m,ids,col,tx,ty,kk,labels,items,fs,rh,leg:pl.leg}}}
-async function pptEdit(r,o){const s=r.s,p=new PptxGenJS(),w=r.wm/25.4,h=r.hm/25.4,I=v=>v/96,hx=c=>hex(c).slice(1).toUpperCase();
- p.defineLayout({name:'MAP',width:w,height:h});p.layout='MAP';const sl=p.addSlide(),F='Arial';
- sl.addText(s.title,{x:0,y:I(s.m),w,h:.45,align:'center',fontSize:24,bold:true,fontFace:F});
- if(o.note)sl.addText(o.note,{x:I(s.m),y:I(s.m+36),w:w-2*I(s.m),h:o.note.split('\n').length*.3,align:'center',valign:'top',fontSize:15,fontFace:F,margin:0});
- s.ids.forEach((id,j)=>{const b=D[id].bb,bx=s.tx+b[0]*s.kk,by=s.ty+b[1]*s.kk,pts=[];
+ +`<g transform="translate(${tx},${ty}) scale(${kk})">${mp}</g>`+lb
+ +(pl.leg?`<text x="${pl.leg.x}" y="${pl.leg.y+16}" font-size="14" font-weight="700">Colour Code – Districts</text>`+(bk?`<line x1="${pl.leg.x+200}" x2="${pl.leg.x+225}" y1="${pl.leg.y+12}" y2="${pl.leg.y+12}" stroke="#222" stroke-width="1.5"/><text x="${pl.leg.x+232}" y="${pl.leg.y+16}" font-size="11">District boundary</text>`:'')
+  +items.map(i=>`<rect x="${i.x}" y="${i.y}" width="${fs}" height="${fs}" fill="${i.c}" stroke="#333" stroke-width=".8"/><text x="${i.x+fs+6}" y="${i.y+fs-1}" font-size="${fs}">${esc(i.t)}</text>`).join(''):'')+'</svg>';
+ return{svg:svgS,pw,ph,wm,hm,s:{title,m,ids,col,tx,ty,kk,labels,items,fs,rh,leg:pl.leg,bk,by}}}
+async function pptEdit(r,o){const s=r.s,p=new PptxGenJS(),w=r.wm/25.4,h=r.hm/25.4,I=v=>v/96,hx=c=>hex(c).slice(1).toUpperCase(),F='Arial';
+ p.defineLayout({name:'MAP',width:w,height:h});p.layout='MAP';const sl=p.addSlide();
+ sl.addText(s.title,{x:0,y:I(s.m),w,h:.45,align:'center',fontSize:24,bold:true,fontFace:F,objectName:'Title'});
+ if(o.note)sl.addText(o.note,{x:I(s.m),y:I(s.m+36),w:w-2*I(s.m),h:o.note.split('\n').length*.3,align:'center',valign:'top',fontSize:15,fontFace:F,margin:0,objectName:'Note'});
+ const shp=(id,fill,lc,lw,nm)=>{const b=D[id].bb,bx=s.tx+b[0]*s.kk,by=s.ty+b[1]*s.kk,pts=[];
   D[id].p.split(/(?=[MLZ])/).forEach(c=>{if(c[0]==='Z')pts.push({close:true});else if(c.length>1){const[x,y]=c.slice(1).split(',').map(Number),q={x:I(s.tx+x*s.kk-bx),y:I(s.ty+y*s.kk-by)};if(c[0]==='M')q.moveTo=true;pts.push(q)}});
-  sl.addShape('custGeom',{x:I(bx),y:I(by),w:Math.max(.01,I((b[2]-b[0])*s.kk)),h:Math.max(.01,I((b[3]-b[1])*s.kk)),fill:{color:hx(s.col[j])},line:{color:'222222',width:o.bw*.75},points:pts})});
- s.labels.forEach(l=>sl.addText(l.t,{x:I(l.x)-.5,y:I(l.y)-.12,w:1,h:.24,align:'center',valign:'middle',fontSize:l.fs*.75,bold:true,margin:0,fontFace:F}));
- if(s.leg){sl.addText('Colour Code – Districts',{x:I(s.leg.x),y:I(s.leg.y),w:4,h:.28,fontSize:11,bold:true,margin:0,fontFace:F});
+  sl.addShape('custGeom',{x:I(bx),y:I(by),w:Math.max(.01,I((b[2]-b[0])*s.kk)),h:Math.max(.01,I((b[3]-b[1])*s.kk)),fill:{color:fill},line:{color:lc,width:lw},points:pts,objectName:nm})};
+ Object.values(s.by).forEach(js=>{if(o.sbw>0)js.forEach(j=>shp(s.ids[j],'000000','000000',o.sbw*1.5,'State border'));js.forEach(j=>shp(s.ids[j],hx(s.col[j]),'222222',o.bw*.75,nameOf(s.ids[j])))});
+ s.labels.forEach(l=>{if(l.ln){const[a,b,c,d]=l.ln;sl.addShape('line',{x:I(Math.min(a,c)),y:I(Math.min(b,d)),w:I(Math.abs(c-a)),h:I(Math.abs(d-b)),flipV:(c-a)*(d-b)<0,line:{color:'333333',width:.6}});
+  sl.addShape('ellipse',{x:I(a-2.2),y:I(b-2.2),w:I(4.4),h:I(4.4),fill:{color:'111111'},line:{color:'111111',width:.3}})}
+  const hh=I(l.lines.length*l.fs*1.3);sl.addText(l.lines.join('\n'),{x:I(l.x)-.8,y:I(l.y)-hh/2,w:1.6,h:hh,align:'center',valign:'middle',fontSize:l.fs*.75,bold:true,margin:0,fontFace:F,objectName:l.nm+' label'})});
+ if(s.leg){sl.addText('Colour Code – Districts',{x:I(s.leg.x),y:I(s.leg.y),w:2.4,h:.28,fontSize:11,bold:true,margin:0,fontFace:F});
+  if(s.bk){sl.addShape('line',{x:I(s.leg.x+200),y:I(s.leg.y+12),w:I(25),h:0,line:{color:'222222',width:1.2}});sl.addText('District boundary',{x:I(s.leg.x+232),y:I(s.leg.y),w:1.4,h:.28,fontSize:8,margin:0,fontFace:F})}
   s.items.forEach(i=>{sl.addShape('rect',{x:I(i.x),y:I(i.y),w:I(s.fs),h:I(s.fs),fill:{color:hx(i.c)},line:{color:'333333',width:.6}});
-   sl.addText(i.t,{x:I(i.x+s.fs+6),y:I(i.y-(s.rh-s.fs)/2),w:I(s.rh*0+220),h:I(s.rh),fontSize:s.fs*.75,valign:'middle',margin:0,fontFace:F})})}
+   sl.addText(i.t,{x:I(i.x+s.fs+6),y:I(i.y-(s.rh-s.fs)/2),w:2.3,h:I(s.rh),fontSize:s.fs*.75,valign:'middle',margin:0,fontFace:F})})}
  await p.writeFile({fileName:'district-map.pptx'})}
 function show(n){['mapw','prev','cust'].forEach((x,i)=>$(x).style.display=i+1===n?(x==='mapw'?'':'block'):'none');[1,2,3].forEach(i=>$('t'+i).classList.toggle('on',i===n));if(n===2)renderPrev();if(n===3)renderCust()}
 function renderCust(){const ids=[...S];$('cust').innerHTML=(ids.length?'<button onclick="for(const k in CU)delete CU[k];renderCust();sync()">Reset customisations</button><p class="muted">Change colour or the name shown in map, legend and exports.</p>':'<p class="muted">Select districts first.</p>')
@@ -179,7 +210,7 @@ const toCanvas=(svgS,pw,ph,sc)=>new Promise((ok,no)=>{const u=URL.createObjectUR
  im.onerror=()=>no(new Error('Render failed (try lower quality)'));im.src=u});
 async function doExport(){
  if(!S.size)return alert('Select at least one district first.');const o=opts(),btn=$('go');btn.disabled=true;btn.textContent='Exporting…';
- try{const r=pageSVG(o),c=o.fmt==='pptx'?null:await toCanvas(r.svg,r.pw,r.ph,o.q),name='district-map';
+ try{const r=pageSVG(o),c=o.fmt==='pptx'?null:await toCanvas(r.svg,r.pw,r.ph,o.q),name='district-map';o.land=r.pw>r.ph;
   if(o.fmt==='png')c.toBlob(b=>dl(b,name+'.png'));
   else if(o.fmt==='pdf'){const pdf=new window.jspdf.jsPDF({orientation:o.land?'l':'p',unit:'mm',format:o.page});
    pdf.addImage(c.toDataURL('image/jpeg',.95),'JPEG',0,0,pdf.internal.pageSize.getWidth(),pdf.internal.pageSize.getHeight());pdf.save(name+'.pdf')}
